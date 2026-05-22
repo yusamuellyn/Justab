@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-# Add this if your client and server are on different origins
+# Client and server are on different origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -12,7 +12,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-ALLOWED_TYPES = ["image/png", "image/jpeg"]
+ALLOWED_TYPES = ["image/png", "image/jpeg", "application/octet-stream"]
 
 @app.post("/upload")
 async def upload_image(file: UploadFile = File(...)):
@@ -20,12 +20,12 @@ async def upload_image(file: UploadFile = File(...)):
         return {"error": "Invalid File Type"}
     
     try:
-        contents = await file.read()  # ✅ async read
-        os.makedirs("uploads", exist_ok=True)  # ✅ ensure directory exists
+        contents = await file.read()  
+        os.makedirs("uploads", exist_ok=True)  
         with open("uploads/image.png", "wb") as f:
             f.write(contents)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))  # ✅ expose error for debugging
+        raise HTTPException(status_code=500, detail=str(e))  
     finally:
         await file.close()
     

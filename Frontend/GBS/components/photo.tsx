@@ -1,7 +1,15 @@
-import { CameraView, type CameraType, useCameraPermissions } from 'expo-camera';
-import * as MediaLibrary from 'expo-media-library';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import Constants from 'expo-constants';
 import { useRef, useState } from 'react';
-import { Button, StyleSheet, Text, View } from 'react-native';
+import { Button, Platform, StyleSheet, Text, View } from 'react-native';
+
+function getApiUrl() {
+  const host =
+    Constants.expoGoConfig?.debuggerHost?.split(':')[0] ??
+    Constants.expoConfig?.hostUri?.split(':')[0];
+  if (host) return `http://${host}:8000`;
+  return Platform.OS === 'android' ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+}
 
 export default function Photo() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -28,31 +36,25 @@ export default function Photo() {
 
     const photo = await cameraRef.current.takePictureAsync({ quality: 1 });
 
-    // Save to user's gallery (recommended "permanent" save location)
     const formData = new FormData();
-
     formData.append('file', {
       uri: photo.uri,
       name: 'receipt.jpg',
       type: 'image/jpeg',
     } as any);
 
-    const res = await fetch('http://149.125.69.75:8000/upload', {
+    await fetch(`${getApiUrl()}/upload`, {
       method: 'POST',
       body: formData,
     });
 
-    const text = await res.text();
-    console.log('upload status:', res.status, text);
-    
     setShowCamera(false);
   };
 
-  
-  if(!showCamera){
+  if (!showCamera) {
     return (
-      <Button title = "Open Camera" onPress = {()=> setShowCamera(true)}/>
-    )
+      <Button title="Open Camera" onPress={() => setShowCamera(true)} />
+    );
   }
   return (
     <View style={styles.container}>
@@ -66,12 +68,11 @@ export default function Photo() {
       </View>
 
       <View style={styles.buttonContainer}>
-
         <Button
           title="Close Camera"
           onPress={() => setShowCamera(false)}
         />
-        <Button title = "Take Photo" onPress = {takePhoto}/>
+        <Button title="Take Photo" onPress={takePhoto} />
       </View>
     </View>
   );
