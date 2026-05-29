@@ -13,7 +13,6 @@ function getApiUrl() {
 
 export default function Photo() {
   const [permission, requestPermission] = useCameraPermissions();
-  const [showCamera, setShowCamera] = useState(false);
   const cameraRef = useRef<CameraView | null>(null);
 
   if (!permission) {
@@ -43,19 +42,17 @@ export default function Photo() {
       type: 'image/jpeg',
     } as any);
 
-    await fetch(`${getApiUrl()}/upload`, {
+    const uploadPhoto = await fetch(`${getApiUrl()}/upload`, {
       method: 'POST',
       body: formData,
     });
 
-    setShowCamera(false);
+    if(!uploadPhoto.ok){
+      throw new Error(`Upload Failed ${uploadPhoto.status}`);
+    }
+
   };
 
-  if (!showCamera) {
-    return (
-      <Button title="Open Camera" onPress={() => setShowCamera(true)} />
-    );
-  }
   return (
     <View style={styles.container}>
       <View style={styles.cameraWrapper}>
@@ -68,10 +65,6 @@ export default function Photo() {
       </View>
 
       <View style={styles.buttonContainer}>
-        <Button
-          title="Close Camera"
-          onPress={() => setShowCamera(false)}
-        />
         <Button title="Take Photo" onPress={takePhoto} />
       </View>
     </View>
