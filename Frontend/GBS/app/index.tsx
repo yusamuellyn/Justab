@@ -1,26 +1,40 @@
+import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Photo from '../components/photo';
-
 
 export default function Index() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Camera</Text>
+    <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']}>
+      <View style={styles.header}>
+        <Ionicons name="menu" size={28} color="#000" />
+        <Text style={styles.title}>GBS</Text>
+        <View style={styles.headerSpacer} />
+      </View>
       <Photo />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
-    alignItems: 'stretch',
-    justifyContent: 'flex-start',
-    padding: 24,
+    backgroundColor: '#fff',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: '#fff',
   },
   title: {
-    fontSize: 32,
+    fontSize: 22,
     fontWeight: '700',
-    marginBottom: 12,
+    color: '#000',
+  },
+  headerSpacer: {
+    width: 28,
   },
 });

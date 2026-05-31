@@ -6,7 +6,7 @@ export default function RootLayout() {
   return (
     <>
       <Stack>
-        <Stack.Screen name="index" options={{ title: 'GBS' }} />
+        <Stack.Screen name="index" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
     </>

@@ -1,7 +1,17 @@
+import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import Constants from 'expo-constants';
-import { useRef, useState } from 'react';
-import { Button, Platform, StyleSheet, Text, View } from 'react-native';
+import { useRef } from 'react';
+import {
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+const GREEN = '#22C55E';
 
 function getApiUrl() {
   const host =
@@ -16,16 +26,18 @@ export default function Photo() {
   const cameraRef = useRef<CameraView | null>(null);
 
   if (!permission) {
-    // Camera permissions are still loading.
-    return <View />;
+    return <View style={styles.fill} />;
   }
 
   if (!permission.granted) {
-    // Camera permissions are not granted yet.
     return (
-      <View style={styles.container}>
-        <Text style={styles.message}>We need your permission to show the camera</Text>
-        <Button onPress={requestPermission} title="grant permission" />
+      <View style={styles.permissionBox}>
+        <Text style={styles.permissionText}>
+          We need your permission to show the camera
+        </Text>
+        <Pressable style={styles.permissionButton} onPress={requestPermission}>
+          <Text style={styles.permissionButtonText}>Grant permission</Text>
+        </Pressable>
       </View>
     );
   }
@@ -47,60 +59,162 @@ export default function Photo() {
       body: formData,
     });
 
-    if(!uploadPhoto.ok){
+    const data = await uploadPhoto.json();
+    console.log(data);
+
+    if (!uploadPhoto.ok) {
       throw new Error(`Upload Failed ${uploadPhoto.status}`);
     }
-
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.cameraWrapper}>
+    <View style={styles.fill}>
+      <View style={styles.cameraSection}>
         <CameraView
           ref={(ref) => {
             cameraRef.current = ref;
           }}
           style={StyleSheet.absoluteFillObject}
         />
+
+        <View style={styles.cameraOverlay}>
+          <View style={styles.topIcons}>
+            {/* Adjust This later */}
+            <Ionicons name="flash-off" size={26} color="#fff" />
+            <Ionicons name="camera-reverse-outline" size={26} color="#fff" />
+          </View>
+
+         
+        </View>
       </View>
 
-      <View style={styles.buttonContainer}>
-        <Button title="Take Photo" onPress={takePhoto} />
-      </View>
+      <SafeAreaView style={styles.bottomBar} edges={['bottom']}>
+        <View style={styles.bottomActions}>
+          <View style={styles.sideAction}>
+            <Ionicons name="cloud-upload-outline" size={28} color="#000" />
+            {/* Adjust This later */}
+            <Text style={styles.sideActionLabel}>Upload from{'\n'}Gallery</Text> 
+          </View>
+
+          <View style={styles.shutterWrap}>
+            <View style={styles.shutterRing3} />
+            <View style={styles.shutterRing2} />
+            <View style={styles.shutterRing1} />
+            <Pressable style={styles.shutterButton} onPress={takePhoto} />
+          </View>
+
+          <View style={styles.sideAction}>
+            {/* Adjust This later */}
+            <Ionicons name="qr-code-outline" size={28} color="#000" />
+            <Text style={styles.sideActionLabel}>Scan QR{'\n'}Code</Text> 
+          </View>
+        </View>
+      </SafeAreaView>
     </View>
   );
 }
+
 const styles = StyleSheet.create({
-  container: {
+  fill: {
     flex: 1,
-    alignSelf: 'stretch',
-    width: '100%',
+    backgroundColor: '#fff',
+  },
+  permissionBox: {
+    flex: 1,
     justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
   },
-  cameraWrapper: {
-    flex: 1,
-    width: '100%',
-    position: 'relative',
-  },
-  message: {
+  permissionText: {
+    fontSize: 16,
     textAlign: 'center',
-    paddingBottom: 10,
+    marginBottom: 16,
+    color: '#333',
   },
-  buttonContainer: {
-    position: 'absolute',
-    bottom: 64,
-    flexDirection: 'row',
-    backgroundColor: 'transparent',
-    width: '100%',
-    paddingHorizontal: 64,
+  permissionButton: {
+    backgroundColor: GREEN,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
   },
-  button: {
+  permissionButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  cameraSection: {
     flex: 1,
+    backgroundColor: '#111',
+    overflow: 'hidden',
+  },
+  cameraOverlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  topIcons: {
+    position: 'absolute',
+    top: 16,
+    left: 20,
+    right: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  text: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
+  bottomBar: {
+    backgroundColor: '#fff',
+    paddingTop: 20,
+    paddingBottom: 8,
+  },
+  bottomActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 28,
+  },
+  sideAction: {
+    alignItems: 'center',
+    width: 90,
+  },
+  sideActionLabel: {
+    marginTop: 6,
+    fontSize: 11,
+    textAlign: 'center',
+    color: '#000',
+    lineHeight: 14,
+  },
+  shutterWrap: {
+    width: 88,
+    height: 88,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shutterRing3: {
+    position: 'absolute',
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.2)',
+  },
+  shutterRing2: {
+    position: 'absolute',
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.35)',
+  },
+  shutterRing1: {
+    position: 'absolute',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.5)',
+  },
+  shutterButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: GREEN,
   },
 });
