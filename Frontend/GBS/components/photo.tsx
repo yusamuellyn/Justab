@@ -10,20 +10,15 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { getApiUrl } from '../utils/api';
 
 const GREEN = '#22C55E';
-
-function getApiUrl() {
-  const host =
-    Constants.expoGoConfig?.debuggerHost?.split(':')[0] ??
-    Constants.expoConfig?.hostUri?.split(':')[0];
-  if (host) return `http://${host}:8000`;
-  return Platform.OS === 'android' ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
-}
 
 export default function Photo() {
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView | null>(null);
+  const router = useRouter();
 
   if (!permission) {
     return <View style={styles.fill} />;
@@ -60,11 +55,12 @@ export default function Photo() {
     });
 
     const data = await uploadPhoto.json();
-    console.log(data);
+    
 
     if (!uploadPhoto.ok) {
       throw new Error(`Upload Failed ${uploadPhoto.status}`);
     }
+    router.push(`/receipts/${data.id}` as any)
   };
 
   return (

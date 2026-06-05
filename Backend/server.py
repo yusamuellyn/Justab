@@ -160,15 +160,15 @@ async def upload_image(file: UploadFile = File(...)):
                     for a in range(len(price_array)):
                         words = item_array[a].strip().lower().split() if a < len(item_array) else []
                         if any(is_real_word(word) for word in words):
-                            item_button_display.append(f"{item_array[a].strip()} / Cost: {price_array[a]}")
+                            item_button_display.append(f"{item_array[a].strip()}")
                         # Inputs Item # If English Language Word Not Detected
                         else:
-                            item_button_display.append(f"Item {a + 1} / Cost: {price_array[a]}")
+                            item_button_display.append(f"Item {a + 1}")
 
                 # For Cases On Different Line
                 else:
                     for a in range(len(price_array)):
-                        item_button_display.append(f"Item {a + 1} / Cost: {price_array[a]}")
+                        item_button_display.append(f"Item {a + 1}")
 
                 return price_array, item_button_display
 
@@ -187,6 +187,7 @@ async def upload_image(file: UploadFile = File(...)):
                 
             with open("receipt.json", "w") as file:
                 json.dump(itemList, file)
+                
             response = supabase.table("receipts").insert({
             "receipt_url": public_url,
             "items": itemList
@@ -220,6 +221,6 @@ async def upload_image(id: int):
         .eq("id", id)
         .execute()
         )
-        return {"info": response}
+        return {"info": response.data[0]}
     except Exception as e: 
         raise HTTPException(status_code=500, detail = f"{type(e).__name__}: {e}" )
