@@ -17,6 +17,8 @@ import json
 import requests
 import numpy as np
 import ssl 
+
+import secrets 
 load_dotenv()
 
 url = os.environ.get("SUPABASE_URL")
@@ -185,16 +187,39 @@ async def upload_image(file: UploadFile = File(...)):
                 
             with open("receipt.json", "w") as file:
                 json.dump(itemList, file)
-            
-            supabase.table("receipts").insert({
+            response = supabase.table("receipts").insert({
             "receipt_url": public_url,
             "items": itemList
             }).execute()
-            return {"items": itemList, "receipt_url": public_url}
+            return {"id": response.data[0]["id"]}
     
     except Exception as e:
         print(f"ERROR: {type(e).__name__}: {e}")
         raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {e}")
+    
+@app.post("/add-tip")   
+async def update_tip(tip: int, id: int):
+    try:
+        response = (
+            supabase.table("receipts")
+            .update({"tip": tip})
+            .eq("id", id)
+            .execute()
+        )
+        return {"success": "Tip upload successfully"}
+    except Exception as e: 
+        raise HTTPException(status_code=500, detail = f"{type(e).__name__}: {e}" )
         
-
-   
+         
+@app.get("/receipt-info")
+async def upload_image(id: int):
+    try:
+        response = (
+        supabase.table("receipts")
+        .select("items, tax , tip, total")
+        .eq("id", id)
+        .execute()
+        )
+        return {"info": response}
+    except Exception as e: 
+        raise HTTPException(status_code=500, detail = f"{type(e).__name__}: {e}" )
