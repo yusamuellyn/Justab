@@ -13,10 +13,10 @@ export default function Receipt() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
     const [items, setItems] = useState<any>(null);
+    const [tip, setTips] = useState<any>(null);
     
     useEffect(() => {
       const getInfo = async () => {
-  
         const getReceiptInfo = await fetch(`${getApiUrl()}/receipt-info?id=${id}`, {
             method: 'GET',
         })
@@ -28,6 +28,7 @@ export default function Receipt() {
         }
         console.log(dataInfo);
         setItems(dataInfo.info.items);
+        setTips(dataInfo.info.tip);
       };
       getInfo();
     }, [id])
@@ -40,6 +41,7 @@ export default function Receipt() {
                 </TouchableOpacity>
                 <Text style={styles.title}>Review & Invite</Text>
             </View>
+
             <View style={styles.card}>
                 {items && Object.entries(items).map(([name, price]) => (
                     <View key={name} style={styles.row}>
@@ -48,6 +50,15 @@ export default function Receipt() {
                     </View>
                 ))}
             </View>
+
+            {tip != null && (
+                <View style={styles.card}>
+                    <View style={styles.row}>
+                        <Text style={styles.itemName}>Tip</Text>
+                        <Text style={styles.itemPrice}>${Number(tip).toFixed(2)}</Text>
+                    </View>
+                </View>
+            )}
         </SafeAreaView>
     );
 }
@@ -72,6 +83,7 @@ const styles = StyleSheet.create({
         shadowRadius: 12,
         shadowOffset: { width: 0, height: 4 },
         elevation: 3,
+        marginBottom: 16,
     },
     row: {
         flexDirection: 'row',
