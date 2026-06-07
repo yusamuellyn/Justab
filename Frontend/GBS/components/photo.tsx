@@ -60,7 +60,7 @@ export default function Photo() {
     if (!uploadPhoto.ok) {
       throw new Error(`Upload Failed ${uploadPhoto.status}`);
     }
-    router.push(`/receipts/${data.id}` as any)
+    router.push(`/tip/${data.id}` as any)
   };
 
   return (

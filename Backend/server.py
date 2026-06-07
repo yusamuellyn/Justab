@@ -210,10 +210,10 @@ async def update_tip(tip: int, id: int):
         return {"success": "Tip upload successfully"}
     except Exception as e: 
         raise HTTPException(status_code=500, detail = f"{type(e).__name__}: {e}" )
-        
+
          
 @app.get("/receipt-info")
-async def upload_image(id: int):
+async def receipt_info(id: int):
     try:
         response = (
         supabase.table("receipts")
@@ -224,3 +224,5 @@ async def upload_image(id: int):
         return {"info": response.data[0]}
     except Exception as e: 
         raise HTTPException(status_code=500, detail = f"{type(e).__name__}: {e}" )
+    
+

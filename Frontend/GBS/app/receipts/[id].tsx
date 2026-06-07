@@ -26,7 +26,8 @@ export default function Receipt() {
         if (!getReceiptInfo.ok) {
             throw new Error(`GET info failed ${getReceiptInfo.status}`);
         }
-        setItems(dataInfo.info.data[0].items);
+        console.log(dataInfo);
+        setItems(dataInfo.info.items);
       };
       getInfo();
     }, [id])
