@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
@@ -13,10 +14,12 @@ export default function Receipt() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
     const [items, setItems] = useState<any>(null);
-    const [tip, setTips] = useState<any>(null);
+    const [joinCode, setJoinCode] = useState<string>('');
+
     
     useEffect(() => {
       const getInfo = async () => {
+  
         const getReceiptInfo = await fetch(`${getApiUrl()}/receipt-info?id=${id}`, {
             method: 'GET',
         })
@@ -26,9 +29,9 @@ export default function Receipt() {
         if (!getReceiptInfo.ok) {
             throw new Error(`GET info failed ${getReceiptInfo.status}`);
         }
-        console.log(dataInfo);
         setItems(dataInfo.info.items);
-        setTips(dataInfo.info.tip);
+        // setItems(dataInfo.info.data[0].items);
+        setJoinCode(dataInfo.info.partyJoinCode);
       };
       getInfo();
     }, [id])
@@ -41,7 +44,6 @@ export default function Receipt() {
                 </TouchableOpacity>
                 <Text style={styles.title}>Review & Invite</Text>
             </View>
-
             <View style={styles.card}>
                 {items && Object.entries(items).map(([name, price]) => (
                     <View key={name} style={styles.row}>
@@ -50,15 +52,18 @@ export default function Receipt() {
                     </View>
                 ))}
             </View>
-
-            {tip != null && (
-                <View style={styles.card}>
-                    <View style={styles.row}>
-                        <Text style={styles.itemName}>Tip</Text>
-                        <Text style={styles.itemPrice}>${Number(tip).toFixed(2)}</Text>
-                    </View>
+            
+            
+            <View style={styles.card}>
+                <View style={styles.row}>
+                    <Text style={styles.itemName}> Party Code (If Necessary): {joinCode}</Text>
+                    <TouchableOpacity style={styles.itemName} onPress={() => {}}>
+                        <Text>Create Party</Text>
+                    </TouchableOpacity>
                 </View>
-            )}
+            </View>
+                
+            
         </SafeAreaView>
     );
 }
@@ -83,13 +88,26 @@ const styles = StyleSheet.create({
         shadowRadius: 12,
         shadowOffset: { width: 0, height: 4 },
         elevation: 3,
-        marginBottom: 16,
     },
     row: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         paddingVertical: 4,
     },
-    itemName: { fontSize: 15, color: '#333', flex: 1 },
-    itemPrice: { fontSize: 15, color: '#333', fontVariant: ['tabular-nums'] },
+
+     input: {
+    height: 50,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 15,
+    marginBottom: 15,
+  },
+  
+  displayText: {
+    fontSize: 18,
+  },
+
+  itemName: { fontSize: 15, color: '#333', flex: 1 },
+  itemPrice: { fontSize: 15, color: '#333', fontVariant: ['tabular-nums'] },
 });

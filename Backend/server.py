@@ -1,4 +1,5 @@
 import os
+from urllib import response
 import uuid
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,8 +22,21 @@ import ssl
 import secrets 
 load_dotenv()
 
-url = os.environ.get("SUPABASE_URL")
-key = os.environ.get("SUPABASE_KEY")
+import random
+import platform
+
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+
+
+# if platform.system() == 'Windows':
+#     pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+# else:
+#     pytesseract.pytesseract.tesseract_cmd = 'tesseract'
+
+
+
+url = os.environ.get("EXPO_PUBLIC_SUPABASE_URL")
+key = os.environ.get("EXPO_PUBLIC_SUPABASE_KEY")
 supabase: Client = create_client(url, key)
 app = FastAPI()
 
@@ -35,6 +49,32 @@ app.add_middleware(
 )
 
 ALLOWED_TYPES = ["image/png", "image/jpeg", "application/octet-stream"]
+
+
+def makeCode():
+     letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']
+     ucLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
+     numbers = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
+     finalString = ""
+
+     for i in range(0,4):
+        random_Index_L = random.randrange(len(letters))
+        random_Index_N = random.randrange(len(numbers))
+        random_Form = random.randrange(0,3)
+
+        if (random_Form) == 0: 
+            finalString = finalString + f"{letters[random_Index_L]}"
+        
+        if (random_Form) == 1: 
+            finalString = finalString + f"{ucLetters[random_Index_L]}"
+
+        if (random_Form) == 2: 
+            finalString = finalString + f"{numbers[random_Index_N]}"
+
+     return finalString     
+
+     
+
 @app.post("/upload")
 async def upload_image(file: UploadFile = File(...)):
     if file.content_type not in ALLOWED_TYPES:
@@ -171,8 +211,7 @@ async def upload_image(file: UploadFile = File(...)):
                         item_button_display.append(f"Item {a + 1}")
 
                 return price_array, item_button_display
-
-
+            
         # Test
         price_array, items = process_receipt(resp)
         if items is None:
@@ -184,20 +223,31 @@ async def upload_image(file: UploadFile = File(...)):
             for item, price in zip(items, price_array): 
                 itemList[item] = price
                 length = length + 1
-                
+                    
             with open("receipt.json", "w") as file:
                 json.dump(itemList, file)
                 
+
+            partyJoinCode = makeCode()
+            print(f"Generated code: {partyJoinCode}")
             response = supabase.table("receipts").insert({
             "receipt_url": public_url,
-            "items": itemList
+            "items": itemList,
+            "partyJoinCode": partyJoinCode
             }).execute()
             return {"id": response.data[0]["id"]}
     
     except Exception as e:
         print(f"ERROR: {type(e).__name__}: {e}")
         raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {e}")
-    
+
+
+
+
+
+
+   
+
 @app.post("/add-tip")   
 async def update_tip(tip: int, id: int):
     try:
@@ -210,19 +260,17 @@ async def update_tip(tip: int, id: int):
         return {"success": "Tip upload successfully"}
     except Exception as e: 
         raise HTTPException(status_code=500, detail = f"{type(e).__name__}: {e}" )
-
+        
          
 @app.get("/receipt-info")
-async def receipt_info(id: int):
+async def upload_image(id: int):
     try:
         response = (
         supabase.table("receipts")
-        .select("items, tax , tip, total")
+        .select("items, tax, tip, total, partyJoinCode")
         .eq("id", id)
         .execute()
         )
         return {"info": response.data[0]}
     except Exception as e: 
         raise HTTPException(status_code=500, detail = f"{type(e).__name__}: {e}" )
-    
-

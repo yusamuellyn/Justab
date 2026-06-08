@@ -6,12 +6,14 @@ import {
   Platform,
   Pressable,
   StyleSheet,
+  TouchableOpacity,
   Text,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { getApiUrl } from '../utils/api';
+import { Image } from 'react-native';
 
 const GREEN = '#22C55E';
 
@@ -101,8 +103,12 @@ export default function Photo() {
 
           <View style={styles.sideAction}>
             {/* Adjust This later */}
-            <Ionicons name="qr-code-outline" size={28} color="#000" />
-            <Text style={styles.sideActionLabel}>Scan QR{'\n'}Code</Text> 
+            <TouchableOpacity onPress={() => router.push('/party')}> 
+             <Image source={require('../assets/images/partyicon.png')} style={{ width: 90, height: 90 }} />
+             <Text style={styles.sideActionLabel}>Join{'\n'}Party</Text> 
+            </TouchableOpacity>
+
+
           </View>
         </View>
       </SafeAreaView>
