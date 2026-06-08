@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
@@ -13,6 +14,8 @@ export default function Receipt() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
     const [items, setItems] = useState<any>(null);
+    const [joinCode, setJoinCode] = useState<string>('');
+
     
     useEffect(() => {
       const getInfo = async () => {
@@ -26,7 +29,9 @@ export default function Receipt() {
         if (!getReceiptInfo.ok) {
             throw new Error(`GET info failed ${getReceiptInfo.status}`);
         }
-        setItems(dataInfo.info.data[0].items);
+        setItems(dataInfo.info.items);
+        // setItems(dataInfo.info.data[0].items);
+        setJoinCode(dataInfo.info.partyJoinCode);
       };
       getInfo();
     }, [id])
@@ -47,6 +52,18 @@ export default function Receipt() {
                     </View>
                 ))}
             </View>
+            
+            
+            <View style={styles.card}>
+                <View style={styles.row}>
+                    <Text style={styles.itemName}> Party Code (If Necessary): {joinCode}</Text>
+                    <TouchableOpacity style={styles.itemName} onPress={() => {}}>
+                        <Text>Create Party</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+                
+            
         </SafeAreaView>
     );
 }
@@ -77,6 +94,20 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingVertical: 4,
     },
-    itemName: { fontSize: 15, color: '#333', flex: 1 },
-    itemPrice: { fontSize: 15, color: '#333', fontVariant: ['tabular-nums'] },
+
+     input: {
+    height: 50,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 15,
+    marginBottom: 15,
+  },
+  
+  displayText: {
+    fontSize: 18,
+  },
+
+  itemName: { fontSize: 15, color: '#333', flex: 1 },
+  itemPrice: { fontSize: 15, color: '#333', fontVariant: ['tabular-nums'] },
 });
