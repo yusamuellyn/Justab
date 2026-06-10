@@ -15,8 +15,18 @@ export default function Receipt() {
     const router = useRouter();
     const [items, setItems] = useState<any>(null);
     const [joinCode, setJoinCode] = useState<string>('');
+    const [tip, setTips] = useState<any>(null);
+    const [userName, setUN] = useState('');
 
-    
+    const createParty = async () => {
+    const response = await fetch(`${getApiUrl()}/createParty?userName=${userName}`, {
+    //   const response = await fetch(`${getApiUrl()}/createParty?userName=Default`, {
+        method: 'POST',
+        });
+        const data = await response.json();
+        router.push('/party');
+    };
+
     useEffect(() => {
       const getInfo = async () => {
   
@@ -52,14 +62,34 @@ export default function Receipt() {
                     </View>
                 ))}
             </View>
+
+            {tip != null && (
+                <View style={styles.card}>
+                    <View style={styles.row}>
+                        <Text style={styles.itemName}>Tip</Text>
+                        <Text style={styles.itemPrice}>${Number(tip).toFixed(2)}</Text>
+                    </View>
+                </View>
+            )}
             
             
             <View style={styles.card}>
                 <View style={styles.row}>
                     <Text style={styles.itemName}> Party Code (If Necessary): {joinCode}</Text>
-                    <TouchableOpacity style={styles.itemName} onPress={() => {}}>
+                    <TouchableOpacity onPress={createParty}>
                         <Text>Create Party</Text>
                     </TouchableOpacity>
+                </View>
+            </View>
+
+            <View style={styles.card}>
+                <View style={styles.row}>
+                    <Text style={styles.itemName}> Enter Username: </Text>
+                    <TextInput
+                        style={styles.input}
+                        onChangeText={setUN}
+                        value={userName}
+                    />
                 </View>
             </View>
                 

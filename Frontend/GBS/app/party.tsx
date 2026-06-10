@@ -1,6 +1,5 @@
 // Imports From Other Files
 import { useLocalSearchParams, useRouter } from "expo-router";  // This and const allow connection to button
-import { getApiUrl } from "@/utils/api";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
     StyleSheet,
@@ -10,12 +9,27 @@ import {
     View,
 } from 'react-native';
 import {useEffect, useState} from "react";
+import { getApiUrl } from "@/utils/api";
 
 
 
 export default function Party() {
   const router = useRouter();
   const [codeInput, setCI] = useState('');
+  const [userName, setUN] = useState('');
+  const [message, setMessage] = useState('');
+
+  const joinParty = async () => {
+    const response = await fetch(`${getApiUrl()}/joinParty?code=${codeInput}&userName=${userName}`, {
+    method: 'POST',
+    });
+
+    if (response.ok) {
+     setMessage('Joined party!');
+    } else {
+     setMessage('Invalid code.');
+    }
+  };
 
   return (
      <SafeAreaView style={styles.container}>
@@ -26,7 +40,7 @@ export default function Party() {
           <Text style={styles.title}>Join A Party</Text>
         </View>
 
-         <View style={styles.card}>
+        <View style={styles.card}>
                 <View style={styles.row}>
                  <Text style={styles.itemName}> Enter Party Code: </Text>
                  <TextInput
@@ -35,8 +49,28 @@ export default function Party() {
                     value={codeInput}
                     />
                 </View>
-            </View>
+        </View>
 
+        <View style={styles.card}>
+                <View style={styles.row}>
+                  <Text style={styles.itemName}>Enter Username:</Text>
+                  <TextInput
+                    style={styles.input}
+                    onChangeText={setUN}
+                    value={userName}
+                  />
+                </View>
+        </View>
+
+        <View style={styles.card}>
+                <View style={styles.row}>
+                  <TouchableOpacity onPress={joinParty}>
+                    <Text>Join Party</Text>
+                  </TouchableOpacity>
+                </View>
+        </View>
+        
+        {message ? <Text style={styles.itemName}>{message}</Text> : null}
 
       </SafeAreaView>
   );

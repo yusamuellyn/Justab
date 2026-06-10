@@ -10,9 +10,13 @@ export default function Tip(){
     const [selectedValue, setSelectedValue] = useState('');
 
     const confirmTip = async () => {
-        const uploadTip = await fetch(`${getApiUrl()}/add-tip?tip=${Number(selectedValue)}&id=${id}`, {
-            method: 'POST',
-        });
+        const uploadTip = await fetch(`${getApiUrl()}/add-tip?tip=${Number(selectedValue)}&id=${Number(id)}`, {
+        method: 'POST',
+});
+        // const uploadTip = await fetch(`${getApiUrl()}/add-tip?tip=${Number(selectedValue)}&id=${id}`, {
+        //     method: 'POST',
+        // });
+        
         if(!uploadTip.ok){
             throw new Error(`POST tip failed ${uploadTip.status}`);
         }

@@ -23,7 +23,6 @@ import secrets
 load_dotenv()
 
 import random
-import platform
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
@@ -35,7 +34,7 @@ pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tessera
 
 
 
-url = os.environ.get("EXPO_PUBLIC_SUPABASE_URL")
+url = os.environ.get("EXPO_PUBLIC_SUPABASE_URL") # Change To SUPABASE_URL / KEY
 key = os.environ.get("EXPO_PUBLIC_SUPABASE_KEY")
 supabase: Client = create_client(url, key)
 app = FastAPI()
@@ -55,6 +54,7 @@ def makeCode():
      letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']
      ucLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
      numbers = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
+    
      finalString = ""
 
      for i in range(0,4):
@@ -71,9 +71,29 @@ def makeCode():
         if (random_Form) == 2: 
             finalString = finalString + f"{numbers[random_Index_N]}"
 
-     return finalString     
+     return finalString  
 
-     
+def makeID():
+ letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']
+ ucLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
+ numbers = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
+
+ finalID = ""
+ for i in range(0,8):
+        random_Index_L = random.randrange(len(letters))
+        random_Index_N = random.randrange(len(numbers))
+        random_Form = random.randrange(0,3)
+
+        if (random_Form) == 0: 
+            finalID = finalID+ f"{letters[random_Index_L]}"
+        
+        if (random_Form) == 1: 
+            finalID = finalID + f"{ucLetters[random_Index_L]}"
+
+        if (random_Form) == 2: 
+            finalID = finalID+ f"{numbers[random_Index_N]}"
+
+ return finalID   
 
 @app.post("/upload")
 async def upload_image(file: UploadFile = File(...)):
@@ -274,3 +294,43 @@ async def upload_image(id: int):
         return {"info": response.data[0]}
     except Exception as e: 
         raise HTTPException(status_code=500, detail = f"{type(e).__name__}: {e}" )
+    
+
+@app.post("/createParty")
+async def createParty(userName: str):
+    partyID = makeID()
+    role = "Leader"
+    
+
+    print(f"Generated code: {partyID}")
+
+    response = supabase.table("partyMaking").insert({
+    "partyID": partyID,
+    "partyRole": role,
+    "user": userName
+           
+    }).execute()
+    return {"partyID": partyID}
+
+
+@app.post("/joinParty")
+async def joinParty(code:str, userName: str):
+    
+    role = "Member"
+    response = supabase.table("receipts").select("partyJoinCode").eq("partyJoinCode", code).execute()
+
+
+    if not response.data:
+        raise HTTPException(status_code=404, detail="Party not found")
+
+    partyID = response.data[0]["id"]
+    
+    supabase.table("partyMaking").insert({
+        "partyID": partyID,
+        "partyRole": role,
+        "user": userName,
+        "userInput": code,
+    }).execute()
+    
+    return {"partyID": code}
+    
