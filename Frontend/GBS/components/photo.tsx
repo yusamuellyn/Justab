@@ -62,6 +62,7 @@ export default function Photo() {
     if (!uploadPhoto.ok) {
       throw new Error(`Upload Failed ${uploadPhoto.status}`);
     }
+
     router.push(`/tip/${data.id}` as any)
   };
 
@@ -103,7 +104,7 @@ export default function Photo() {
 
           <View style={styles.sideAction}>
             {/* Adjust This later */}
-            <TouchableOpacity onPress={() => router.push('/party')}> 
+            <TouchableOpacity onPress={() => router.push('../party')}> 
              <Image source={require('../assets/images/partyicon.png')} style={{ width: 90, height: 90 }} />
              <Text style={styles.sideActionLabel}>Join{'\n'}Party</Text> 
             </TouchableOpacity>
