@@ -41,6 +41,7 @@ export default function Receipt() {
         }
         setItems(dataInfo.info.items);
         // setItems(dataInfo.info.data[0].items);
+        setTips(dataInfo.info.tip);
         setJoinCode(dataInfo.info.partyJoinCode);
       };
       getInfo();
@@ -62,7 +63,7 @@ export default function Receipt() {
                     </View>
                 ))}
             </View>
-
+            
             {tip != null && (
                 <View style={styles.card}>
                     <View style={styles.row}>
@@ -72,24 +73,12 @@ export default function Receipt() {
                 </View>
             )}
             
-            
             <View style={styles.card}>
                 <View style={styles.row}>
                     <Text style={styles.itemName}> Party Code (If Necessary): {joinCode}</Text>
                     <TouchableOpacity onPress={createParty}>
                         <Text>Create Party</Text>
                     </TouchableOpacity>
-                </View>
-            </View>
-
-            <View style={styles.card}>
-                <View style={styles.row}>
-                    <Text style={styles.itemName}> Enter Username: </Text>
-                    <TextInput
-                        style={styles.input}
-                        onChangeText={setUN}
-                        value={userName}
-                    />
                 </View>
             </View>
                 
