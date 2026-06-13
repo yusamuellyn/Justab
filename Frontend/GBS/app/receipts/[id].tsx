@@ -27,6 +27,19 @@ export default function Receipt() {
         router.push('/party');
     };
 
+    const goToSplit = () => {
+        if (!items) return;
+
+        const itemList = Object.entries(items).map(
+            ([name, price]) => `${name} - $${Number(price).toFixed(2)}`
+        );
+
+        router.push({
+            pathname: `/split/${id}` as any,
+            params: { items: JSON.stringify(itemList) },
+        });
+    };
+
     useEffect(() => {
       const getInfo = async () => {
   
@@ -81,6 +94,10 @@ export default function Receipt() {
                     </TouchableOpacity>
                 </View>
             </View>
+
+            <TouchableOpacity style={styles.splitButton} onPress={goToSplit}>
+                <Text style={styles.splitButtonText}>Split Items</Text>
+            </TouchableOpacity>
                 
             
         </SafeAreaView>
@@ -129,4 +146,16 @@ const styles = StyleSheet.create({
 
   itemName: { fontSize: 15, color: '#333', flex: 1 },
   itemPrice: { fontSize: 15, color: '#333', fontVariant: ['tabular-nums'] },
+  splitButton: {
+    marginTop: 16,
+    backgroundColor: '#22C55E',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  splitButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
