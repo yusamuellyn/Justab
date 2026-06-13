@@ -57,7 +57,7 @@ export default function Photo() {
     });
 
     const data = await uploadPhoto.json();
-    console.log('upload response:', data);
+    console.log('upload response:', data); // 
 
     if (!uploadPhoto.ok) {
       throw new Error(`Upload Failed ${uploadPhoto.status}`);

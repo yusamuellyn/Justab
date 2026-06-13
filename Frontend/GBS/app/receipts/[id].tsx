@@ -19,12 +19,12 @@ export default function Receipt() {
     const [userName, setUN] = useState('');
 
     const createParty = async () => {
-    const response = await fetch(`${getApiUrl()}/createParty?userName=${userName}`, {
+    const response = await fetch(`${getApiUrl()}/createParty?userName=${userName}&id=${id}`, {
     //   const response = await fetch(`${getApiUrl()}/createParty?userName=Default`, {
         method: 'POST',
         });
         const data = await response.json();
-        router.push('/party');
+        router.push({ pathname: '/party', params: { partyID: data.partyID } }); //
     };
 
     const goToSplit = () => {

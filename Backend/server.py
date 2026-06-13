@@ -125,11 +125,11 @@ async def upload_image(file: UploadFile = File(...)):
 
         # As Long As Word Similar To English Language One
         def is_real_word(word):
-            return bool(get_close_matches(word.lower(), english_word_set, n=1, cutoff=0.8))
+            return bool(get_close_matches(word.lower(), english_word_set, n=1, cutoff=0.9))
 
-        # List of Ignore Words, Including Matches With 75%+ Confidence
+        # List of Ignore Words, Including Matches With 85%+ Confidence
         ignore_words = ['sr', 'zrl', 'tumt', 'zr', 'cash', 'change', 'total', 'subtotal', 'gst', 'tax', 'amount', 'cashier', 'summary', 'payment', 'details', 'count', 'iten', 'tlrh', 'rm', 'funding', 'adjustment', 'rounding', 'rounded', 'desc', 'qty', 'price', 'disc', 'gratuity', '%']
-        def should_ignore(word, ignore_words, cutoff=0.75):
+        def should_ignore(word, ignore_words, cutoff=0.85):
             return bool(get_close_matches(word.strip().lower(), ignore_words, n=1, cutoff=cutoff))
 
         def process_receipt(image_path):
@@ -137,21 +137,34 @@ async def upload_image(file: UploadFile = File(...)):
             # Brings In Image
             img = cv2.imdecode(np.asarray(bytearray(image_path.content), dtype="uint8"), cv2.IMREAD_COLOR)
             
+            # Preprocessing
+            
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+            gray = cv2.medianBlur(gray, 3)
+            gray = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 31, 11)
+
+
             # Adding Custom Settings For Tesseract
             custom_config = r'--oem 3 --psm 6' # Custom Parameters (oem controls engine to use, 3 is for general purposes. psm is text interpretation - 6 is one block)
-            text = pytesseract.image_to_string(img, config=custom_config) # Gives image to tesseract alongside above configurations.
+            text = pytesseract.image_to_string(gray, config=custom_config) # Gives image to tesseract alongside above configurations.
 
             # Special Text Issue Cases, With 0/O At End
-            text = re.sub(r'[lI|]', '1', text)
-            text_norm = re.sub(r'[@oO]', '0', text)
+            text_norm = text
+
+            text_norm = re.sub(r'[lI|]', '1', text)
+            text_norm = re.sub(r'[@oO]', '0', text_norm)
 
             # Split Text By Lines
-            line_div = text_norm.split('\n')
+            line_div = text.split('\n')
+            line_div_norm = text_norm.split('\n')
 
             # Important Variables
             number_array = ['1','2','3','4', '5', '6', '7', '8', '9', '0']
             price_array = []
             item_array = []
+            totalPrice = None 
+            # Above Can Also = 0
 
             # Finds Price Using Number Based Logic
             for i in range(len(text_norm) - 2):
@@ -181,22 +194,60 @@ async def upload_image(file: UploadFile = File(...)):
                             if re.match(r'^\d{1,4}\.\d{2}$', price):
                                 price_array.append(price)
 
+
+            # Keep only the rightmost (Total) price per line
+            filtered_price_array = []
+            for l in line_div_norm:
+                prices_in_line = [p for p in price_array if p in l]
+                if prices_in_line:
+                  last_price = max(prices_in_line, key=lambda p: l.rfind(p)) # Specifically This Line
+                
+                  if last_price not in filtered_price_array:
+                    filtered_price_array.append(last_price)
+            price_array = filtered_price_array
+
+
             # For Each Line In Text With A Price In Price_Array
             # 1 - Checks To Make Sure Price Not Repeated In Line
             # 2 - Ensures Letters Only
-            for l in line_div:
+            # for l in line_div:
+            #     seen_in_line = set()
+            #     for h in range(len(price_array)):
+            #         if price_array[h] in l and price_array[h] not in seen_in_line:
+            #             seen_in_line.add(price_array[h])
+            #             l_split = l.split(price_array[h])[0]
+            #             letters_only = re.sub(r'[^a-zA-Z\s]', '', l_split)
+
+            # Reworked By Claude To Fix Number/Letter "cassic" issue. Understand Friday. 
+            for idx, l in enumerate(line_div):
+                norm_l = line_div_norm[idx] if idx < len(line_div_norm) else l
                 seen_in_line = set()
                 for h in range(len(price_array)):
-                    if price_array[h] in l and price_array[h] not in seen_in_line:
-                        seen_in_line.add(price_array[h])
-                        l_split = l.split(price_array[h])[0]
-                        letters_only = re.sub(r'[^a-zA-Z\s]', '', l_split)
-                        if letters_only.strip():
-                            item_array.append(letters_only)
+                 if price_array[h] in norm_l and price_array[h] not in seen_in_line:
+                  seen_in_line.add(price_array[h])
+                  pos = norm_l.find(price_array[h])
+                  l_split = l[:pos]
+                  letters_only = re.sub(r'[^a-zA-Z\s]', '', l_split)
+
+                  #AI slop At Beginning Fix
+                  words = letters_only.strip().split()
+                  while words and len(words[0]) <= 3 and not is_real_word(words[0]):
+                     words.pop(0)
+                  cleaned_name = ' '.join(words)
+                  
+                  # This also VC, understand ASAP
+                  if "total" in cleaned_name.lower() and "sub" not in cleaned_name.lower():
+                      totalPrice = price
+                      continue
+
+                  if cleaned_name:
+                     item_array.append(cleaned_name)
+                      
 
             # List of Ignore Words In Lowercase and Abcd Formats
             ignore_words_upper = [w.upper() for w in ignore_words]
             ignore_words_title = [w.title() for w in ignore_words]
+
 
             # Loops In Reverse Order, Using The Shorter Array To Avoid Errors
             for s in range(min(len(price_array), len(item_array)) - 1, -1, -1):
@@ -208,7 +259,7 @@ async def upload_image(file: UploadFile = File(...)):
             # Price Organization Logic
             # If There Are No Prices Detected, New Image Needed
             if len(price_array) == 0:
-                return None, None
+                return None, None, None
 
             else:
                 item_button_display = []
@@ -230,10 +281,10 @@ async def upload_image(file: UploadFile = File(...)):
                     for a in range(len(price_array)):
                         item_button_display.append(f"Item {a + 1}")
 
-                return price_array, item_button_display
+                return price_array, item_button_display, totalPrice
             
         # Test
-        price_array, items = process_receipt(resp)
+        price_array, items, totalPrice = process_receipt(resp)
         if items is None:
             return {"message": "Invalid Receipt"}
         else:
@@ -253,7 +304,9 @@ async def upload_image(file: UploadFile = File(...)):
             response = supabase.table("receipts").insert({
             "receipt_url": public_url,
             "items": itemList,
-            "partyJoinCode": partyJoinCode
+            "partyJoinCode": partyJoinCode,
+            "total": totalPrice
+
             }).execute()
             return {"id": response.data[0]["id"]}
     
@@ -297,19 +350,23 @@ async def upload_image(id: int):
     
 
 @app.post("/createParty")
-async def createParty(userName: str):
+async def createParty(userName: str, id: str):
     partyID = makeID()
     role = "Leader"
     
 
-    print(f"Generated code: {partyID}")
+    
 
-    response = supabase.table("partyMaking").insert({
+    supabase.table("partyMaking").insert({
     "partyID": partyID,
     "partyRole": role,
     "user": userName
            
     }).execute()
+
+
+    supabase.table("receipts").update({"partyID": partyID}).eq("id", id).execute()
+
     return {"partyID": partyID}
 
 
@@ -317,13 +374,13 @@ async def createParty(userName: str):
 async def joinParty(code:str, userName: str):
     
     role = "Member"
-    response = supabase.table("receipts").select("partyJoinCode").eq("partyJoinCode", code).execute()
+    response = supabase.table("receipts").select("partyJoinCode, partyID").eq("partyJoinCode", code).execute()
 
 
     if not response.data:
         raise HTTPException(status_code=404, detail="Party not found")
 
-    partyID = response.data[0]["id"]
+    partyID = response.data[0]["partyID"]
     
     supabase.table("partyMaking").insert({
         "partyID": partyID,
@@ -332,5 +389,12 @@ async def joinParty(code:str, userName: str):
         "userInput": code,
     }).execute()
     
-    return {"partyID": code}
+    return {"partyID": partyID}
+
+@app.get("/displayMembers")
+async def displayMembers(partyID: str):
+    response = supabase.table("partyMaking").select("*").eq("partyID", partyID).execute()
+    
+    return {"members": response.data}
+
     

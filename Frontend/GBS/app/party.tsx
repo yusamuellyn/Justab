@@ -18,14 +18,34 @@ export default function Party() {
   const [codeInput, setCI] = useState('');
   const [userName, setUN] = useState('');
   const [message, setMessage] = useState('');
+  const [members, setMembers] = useState<any[]>([]);
+  
+  const params = useLocalSearchParams(); // And Below
+  const [partyID, setPartyID] = useState<string | undefined>(params.partyID as string | undefined);
+
+
+  const getMembers = async () => {
+    if (!partyID) return; // = Changed
+    const response = await fetch(`${getApiUrl()}/displayMembers?partyID=${partyID}`);//
+    const data = await response.json();
+    setMembers(data.members || []); // 
+  };
+
+  useEffect(() => {
+    getMembers();
+  }, [partyID]);
+
 
   const joinParty = async () => {
     const response = await fetch(`${getApiUrl()}/joinParty?code=${codeInput}&userName=${userName}`, {
     method: 'POST',
     });
 
+    const data = await response.json()// 
+
     if (response.ok) {
      setMessage('Joined party!');
+     setPartyID(data.partyID); //
     } else {
      setMessage('Invalid code.');
     }
@@ -71,6 +91,13 @@ export default function Party() {
         </View>
         
         {message ? <Text style={styles.itemName}>{message}</Text> : null}
+
+        {members.map((member, index) => (
+        <View key={index} style={styles.row}>
+          <Text style={styles.itemName}>{member.user}</Text>
+          <Text style={styles.itemPrice}>{member.partyRole}</Text>
+        </View>
+         ))}
 
       </SafeAreaView>
   );
