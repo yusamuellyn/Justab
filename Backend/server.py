@@ -34,8 +34,8 @@ pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tessera
 
 
 
-url = os.environ.get("EXPO_PUBLIC_SUPABASE_URL") # Change To SUPABASE_URL / KEY
-key = os.environ.get("EXPO_PUBLIC_SUPABASE_KEY")
+url = os.environ.get("SUPABASE_URL") # Change To SUPABASE_URL / KEY
+key = os.environ.get("SUPABASE_KEY")
 supabase: Client = create_client(url, key)
 app = FastAPI()
 
@@ -315,12 +315,6 @@ async def upload_image(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {e}")
 
 
-
-
-
-
-   
-
 @app.post("/add-tip")   
 async def update_tip(tip: int, id: int):
     try:
@@ -397,4 +391,49 @@ async def displayMembers(partyID: str):
     
     return {"members": response.data}
 
-    
+@app.get("/displayItems")
+async def displayItems(partyID: str):
+    response = supabase.table("receipts").select("items, splitDisplay").eq("partyID", partyID).execute()
+    if not response.data:
+        raise HTTPException(status_code=404, detail="Receipt not found")
+
+    receipt = response.data[0]
+    raw_items = receipt["items"] or {}
+
+    try:
+        splitDisplay = json.loads(receipt["splitDisplay"]) if receipt["splitDisplay"] else {}
+    except (json.JSONDecodeError, TypeError):
+        splitDisplay = {}
+
+    items = []
+    for index, (name, price) in enumerate(raw_items.items()):
+        items.append({
+            "name": name,
+            "price": float(price),
+            "claims": splitDisplay.get(str(index), []),
+        })
+
+    return {"items": items}
+
+@app.post("/claimItem")
+async def claimItem(partyID: str, itemIndex: str, userName: str):
+    response = supabase.table("receipts").select("splitDisplay").eq("partyID", partyID).execute()
+    if not response.data:
+        raise HTTPException(status_code=404, detail="Receipt not found")
+
+    try:
+        splitDisplay = json.loads(response.data[0]["splitDisplay"]) if response.data[0]["splitDisplay"] else {}
+    except (json.JSONDecodeError, TypeError):
+        splitDisplay = {}
+
+    claimants = splitDisplay.get(itemIndex, [])
+
+    if userName in claimants:
+        claimants.remove(userName)
+    else:
+        claimants.append(userName)
+
+    splitDisplay[itemIndex] = claimants
+    supabase.table("receipts").update({"splitDisplay": json.dumps(splitDisplay)}).eq("partyID", partyID).execute()
+
+    return {"claims": claimants}
