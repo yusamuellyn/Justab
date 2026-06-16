@@ -44,10 +44,11 @@ export default function Party() {
     const data = await response.json()// 
 
     if (response.ok) {
-     setMessage('Joined party!');
-     setPartyID(data.partyID); //
+      setMessage('Joined party!');
+      setPartyID(data.partyID);
+      router.push(`/split/${data.partyID}?userName=${userName}`);
     } else {
-     setMessage('Invalid code.');
+      setMessage('Invalid code.');
     }
   };
 
