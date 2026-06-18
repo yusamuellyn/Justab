@@ -85,6 +85,12 @@ export default function Split() {
           );
         })}
       </View>
+      <TouchableOpacity
+        style={styles.doneButton}
+        onPress={() => router.push(`../totals/${id}?userName=${userName}`)}
+      >
+        <Text style={styles.doneText}>See Totals</Text>
+    </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -117,4 +123,13 @@ const styles = StyleSheet.create({
   itemName: { fontSize: 15, color: '#333' },
   claimedBy: { fontSize: 12, color: '#888', marginTop: 2 },
   itemPrice: { fontSize: 15, color: '#333', fontVariant: ['tabular-nums'] },
+
+  doneButton: {
+    backgroundColor: GREEN,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  doneText: { color: '#fff', fontSize: 16, fontWeight: '600' },
 });

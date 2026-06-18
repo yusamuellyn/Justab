@@ -24,7 +24,7 @@ load_dotenv()
 
 import random
 
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+pytesseract.pytesseract.tesseract_cmd = r'/opt/homebrew/bin/tesseract'
 
 
 # if platform.system() == 'Windows':
@@ -437,3 +437,62 @@ async def claimItem(partyID: str, itemIndex: str, userName: str):
     supabase.table("receipts").update({"splitDisplay": json.dumps(splitDisplay)}).eq("partyID", partyID).execute()
 
     return {"claims": claimants}
+
+@app.get("/displayTotals")
+async def displayTotals(partyID: str):
+    response = supabase.table("receipts").select("items, splitDisplay, tax, tip").eq("partyID", partyID).execute()
+    if not response.data:
+        raise HTTPException(status_code=404, detail="Receipt not found")
+
+    receipt = response.data[0]
+    raw_items = receipt["items"] or {}
+
+    try:
+        splitDisplay = json.loads(receipt["splitDisplay"]) if receipt["splitDisplay"] else {}
+    except (json.JSONDecodeError, TypeError):
+        splitDisplay = {}
+
+    totals = {}
+    unclaimed_cents = 0
+
+    for index, (name, price) in enumerate(raw_items.items()):
+        price_cents = round(float(price) * 100)
+        claimants = splitDisplay.get(str(index), [])
+
+        if not claimants:
+            unclaimed_cents += price_cents
+            continue
+
+        base = price_cents // len(claimants)
+        remainder = price_cents % len(claimants)
+        for i, person in enumerate(claimants):
+            share = base + (1 if i < remainder else 0)
+            totals[person] = totals.get(person, 0) + share
+
+    claimed_subtotal_cents = sum(totals.values())
+
+    tax_cents = round(float(receipt.get("tax") or 0) * 100)
+    tip_percent = receipt.get("tip") or 0
+    tip_cents = round(claimed_subtotal_cents * (tip_percent / 100))
+
+    extra_cents = tax_cents + tip_cents
+
+    if claimed_subtotal_cents > 0 and extra_cents > 0:
+        people = list(totals.keys())
+        running = 0
+        for i, person in enumerate(people):
+            if i == len(people) - 1:
+                share = extra_cents - running
+            else:
+                share = round(extra_cents * (totals[person] / claimed_subtotal_cents))
+                running += share
+            totals[person] += share
+
+    result = [{"user": person, "owes": cents / 100} for person, cents in totals.items()]
+
+    return {
+        "totals": result,
+        "unclaimed": unclaimed_cents / 100,
+        "tax": tax_cents / 100,
+        "tip": tip_cents / 100,
+    }
