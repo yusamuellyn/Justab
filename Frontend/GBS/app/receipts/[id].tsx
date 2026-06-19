@@ -18,27 +18,31 @@ export default function Receipt() {
     const [tip, setTips] = useState<any>(null);
     const [userName, setUN] = useState('');
 
-    const createParty = async () => {
-    const response = await fetch(`${getApiUrl()}/createParty?userName=${userName}&id=${id}`, {
-    //   const response = await fetch(`${getApiUrl()}/createParty?userName=Default`, {
-        method: 'POST',
-        });
-        const data = await response.json();
-        router.push({ pathname: '/party', params: { partyID: data.partyID } }); //
+    
+    const [newPrice, setNewPrice] = useState('');
+    const [newItem, setNewItem] = useState('');
+
+    const [partyID, setPartyID] = useState<string>('');
+
+    const [members, setMembers] = useState<any[]>([]);
+
+    const goToSplit = () => { // DEAL WITH NOT CONNECTING TO BACKEND LATER. THEN OCR FRIDAY.
+      if (!items || !userName) return;
+        router.push(`/split/${partyID}?userName=${userName}` as any);
     };
 
-    const goToSplit = () => {
-        if (!items) return;
+    // const goToSplit = () => {
+    //     if (!items) return;
 
-        const itemList = Object.entries(items).map(
-            ([name, price]) => `${name} - $${Number(price).toFixed(2)}`
-        );
+    //     const itemList = Object.entries(items).map(
+    //         ([name, price]) => `${name} - $${Number(price).toFixed(2)}`
+    //     );
 
-        router.push({
-            pathname: `/split/${id}` as any,
-            params: { items: JSON.stringify(itemList) },
-        });
-    };
+    //     router.push({
+    //         pathname: `/split/${id}` as any,
+    //         params: { items: JSON.stringify(itemList) },
+    //     });
+    // };
 
     useEffect(() => {
       const getInfo = async () => {
@@ -55,9 +59,49 @@ export default function Receipt() {
         setItems(dataInfo.info.items);
         // setItems(dataInfo.info.data[0].items);
         setJoinCode(dataInfo.info.partyJoinCode);
+        setPartyID(dataInfo.info.partyID);
       };
       getInfo();
     }, [id])
+
+    const getMembers = async () => { // 
+    if (!partyID) return;
+     const response = await fetch(`${getApiUrl()}/displayMembers?partyID=${partyID}`);
+     const data = await response.json();
+     setMembers(data.members || []);
+    };
+
+    useEffect(() => { // 
+    getMembers();
+    }, [partyID]);
+
+    const updateUsername = async () => { // 
+     if (!userName) return;
+     await fetch(`${getApiUrl()}/updateLeaderName?partyID=${partyID}&userName=${userName}`, {
+        method: 'POST',
+    });
+    await getMembers();
+    };
+
+    useEffect(() => { // Understand ASAP. Updating Members Live Thing.
+     if (!partyID) return;
+      const interval = setInterval(getMembers, 5000);
+     return () => clearInterval(interval);
+    }, [partyID]);
+
+
+    const addItem = async () => {
+        if (!newItem || !newPrice) return;
+         const response = await fetch(
+            `${getApiUrl()}/manualAdd?id=${id}&itemName=${encodeURIComponent(newItem)}&itemPrice=${encodeURIComponent(newPrice)}`,
+            { method: 'POST' }
+        );
+        
+        const data = await response.json();
+        setItems(data.items);
+        setNewItem('');
+        setNewPrice('');
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -89,15 +133,56 @@ export default function Receipt() {
             <View style={styles.card}>
                 <View style={styles.row}>
                     <Text style={styles.itemName}> Party Code (If Necessary): {joinCode}</Text>
-                    <TouchableOpacity onPress={createParty}>
-                        <Text>Create Party</Text>
-                    </TouchableOpacity>
                 </View>
             </View>
+            
+             <View style={styles.card}>
+            
+                <Text style={styles.itemName}>Enter New Item Name:</Text>
+                    <TextInput
+                        style={styles.input}
+                        onChangeText={setNewItem}
+                        value={newItem}
+                    />
+
+                <Text style={styles.itemName}>Enter New Item Price:</Text>
+                    <TextInput
+                        style={styles.input}
+                        onChangeText={setNewPrice}
+                        value={newPrice}
+                    />
+                    
+                    <TouchableOpacity onPress={addItem}>
+                        <Text>Add Item </Text>
+                    </TouchableOpacity>
+            </View>
+
+            <View style={styles.card}>
+             <View style={styles.row}>
+                <Text style={styles.itemName}>Enter Username:</Text>
+                    <TextInput
+                        style={styles.input}
+                        onChangeText={setUN}
+                        value={userName}
+                    />
+                    
+                    <TouchableOpacity onPress={updateUsername}>
+                        <Text>Confirm </Text>
+                    </TouchableOpacity>
+             </View>
+            </View>
+
 
             <TouchableOpacity style={styles.splitButton} onPress={goToSplit}>
                 <Text style={styles.splitButtonText}>Split Items</Text>
             </TouchableOpacity>
+
+            {members.map((member, index) => (
+                <View key={index} style={styles.row}>
+                    <Text style={styles.itemName}>{member.user}</Text>
+                    <Text style={styles.itemPrice}>{member.partyRole}</Text>
+                </View>
+            ))}
                 
             
         </SafeAreaView>

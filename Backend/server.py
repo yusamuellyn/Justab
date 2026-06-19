@@ -24,7 +24,7 @@ load_dotenv()
 
 import random
 
-pytesseract.pytesseract.tesseract_cmd = r'/opt/homebrew/bin/tesseract'
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 
 # if platform.system() == 'Windows':
@@ -34,8 +34,8 @@ pytesseract.pytesseract.tesseract_cmd = r'/opt/homebrew/bin/tesseract'
 
 
 
-url = os.environ.get("SUPABASE_URL") # Change To SUPABASE_URL / KEY
-key = os.environ.get("SUPABASE_KEY")
+url = os.environ.get("EXPO_PUBLIC_SUPABASE_URL") # Change To SUPABASE_URL / KEY
+key = os.environ.get("EXPO_PUBLIC_SUPABASE_KEY")
 supabase: Client = create_client(url, key)
 app = FastAPI()
 
@@ -229,13 +229,13 @@ async def upload_image(file: UploadFile = File(...)):
                   l_split = l[:pos]
                   letters_only = re.sub(r'[^a-zA-Z\s]', '', l_split)
 
-                  #AI slop At Beginning Fix
+                  #
                   words = letters_only.strip().split()
                   while words and len(words[0]) <= 3 and not is_real_word(words[0]):
                      words.pop(0)
                   cleaned_name = ' '.join(words)
                   
-                  # This also VC, understand ASAP
+                  # 
                   if "total" in cleaned_name.lower() and "sub" not in cleaned_name.lower():
                       totalPrice = price
                       continue
@@ -300,14 +300,25 @@ async def upload_image(file: UploadFile = File(...)):
                 
 
             partyJoinCode = makeCode()
-            print(f"Generated code: {partyJoinCode}")
-            response = supabase.table("receipts").insert({
-            "receipt_url": public_url,
-            "items": itemList,
-            "partyJoinCode": partyJoinCode,
-            "total": totalPrice
+            partyID = makeID()
 
+            # UEOF
+            print(f"Generated code: {partyJoinCode}")
+            supabase.table("partyMaking").insert({
+             "partyID": partyID,
+             "partyRole": "Leader",
+             "user": "Leader",
             }).execute()
+
+            response = supabase.table("receipts").insert({
+                "receipt_url": public_url,
+                "items": itemList,
+                "partyJoinCode": partyJoinCode,
+                "total": totalPrice,
+                "partyID": partyID
+            }).execute()
+
+   
             return {"id": response.data[0]["id"]}
     
     except Exception as e:
@@ -334,7 +345,7 @@ async def upload_image(id: int):
     try:
         response = (
         supabase.table("receipts")
-        .select("items, tax, tip, total, partyJoinCode")
+        .select("items, tax, tip, total, partyJoinCode, partyID")
         .eq("id", id)
         .execute()
         )
@@ -496,3 +507,28 @@ async def displayTotals(partyID: str):
         "tax": tax_cents / 100,
         "tip": tip_cents / 100,
     }
+
+@app.post("/updateLeaderName")
+async def updateLeaderName(partyID: str, userName: str):
+    supabase.table("partyMaking").update({"user": userName}).eq("partyID", partyID).eq("partyRole", "Leader").execute()
+    return {"success": True}
+
+@app.get("/checkStatus")
+async def checkStatus(partyID: str):
+    response = supabase.table("receipts").select("status").eq("partyID", partyID).execute()
+    if not response.data:
+        raise HTTPException(status_code=404, detail="Party not found")
+    return {"status": response.data[0]["status"]}
+
+@app.post("/manualAdd") # Post and Get Diff?
+async def addItem(id: int, itemName: str, itemPrice: str):
+    response = supabase.table("receipts").select("items").eq("id", id).execute()
+    if not response.data:
+        raise HTTPException(status_code=404, detail="Receipt not found")
+    
+    current_items = response.data[0]["items"] or {}
+    current_items[itemName] = itemPrice
+    
+    supabase.table("receipts").update({"items": current_items}).eq("id", id).execute()
+    
+    return {"items": current_items}

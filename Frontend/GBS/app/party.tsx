@@ -20,12 +20,12 @@ export default function Party() {
   const [message, setMessage] = useState('');
   const [members, setMembers] = useState<any[]>([]);
   
-  const params = useLocalSearchParams(); // And Below
+  const params = useLocalSearchParams(); 
   const [partyID, setPartyID] = useState<string | undefined>(params.partyID as string | undefined);
 
 
   const getMembers = async () => {
-    if (!partyID) return; // = Changed
+    if (!partyID) return; 
     const response = await fetch(`${getApiUrl()}/displayMembers?partyID=${partyID}`);//
     const data = await response.json();
     setMembers(data.members || []); // 
@@ -51,6 +51,18 @@ export default function Party() {
       setMessage('Invalid code.');
     }
   };
+
+  const startPolling = (id: string, user: string) => {
+    const interval = setInterval(async () => {
+      const response = await fetch(`${getApiUrl()}/checkStatus?partyID=${id}`);
+      const data = await response.json();
+      if (data.status === 'splitting') {
+        clearInterval(interval);
+        router.push(`/split/${id}?userName=${user}` as any);
+      }
+    }, 3000); // checks every 3 seconds
+    return interval;
+  }; // UNDERSTAND LATER, USED TO ENSURE BOTH PARTY SIDES JOIN AT THE SAME TIME AT THE SPLIT SCREEN
 
   return (
      <SafeAreaView style={styles.container}>
