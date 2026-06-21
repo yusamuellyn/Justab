@@ -1,5 +1,4 @@
-// Imports From Other Files
-import { useLocalSearchParams, useRouter } from "expo-router";  // This and const allow connection to button
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
     StyleSheet,
@@ -10,6 +9,11 @@ import {
 } from 'react-native';
 import {useEffect, useState} from "react";
 import { getApiUrl } from "@/utils/api";
+
+const DEEP_OCEAN = '#1E3A5F';
+const COOL_GRAY = '#C5CDD6';
+const COOL_GRAY_BG = '#E4E9EE';
+const WHITE = '#FFFFFF';
 
 
 
@@ -74,36 +78,35 @@ export default function Party() {
         </View>
 
         <View style={styles.card}>
-                <View style={styles.row}>
-                 <Text style={styles.itemName}> Enter Party Code: </Text>
+                <Text style={styles.fieldLabel}>Party Code</Text>
                  <TextInput
                     style={styles.input}
                     onChangeText={setCI}
                     value={codeInput}
+                    placeholder="Enter party code"
+                    placeholderTextColor={COOL_GRAY}
+                    autoCapitalize="characters"
                     />
-                </View>
         </View>
 
         <View style={styles.card}>
-                <View style={styles.row}>
-                  <Text style={styles.itemName}>Enter Username:</Text>
+                  <Text style={styles.fieldLabel}>Username</Text>
                   <TextInput
                     style={styles.input}
                     onChangeText={setUN}
                     value={userName}
+                    placeholder="Enter username"
+                    placeholderTextColor={COOL_GRAY}
                   />
-                </View>
         </View>
 
         <View style={styles.card}>
-                <View style={styles.row}>
-                  <TouchableOpacity onPress={joinParty}>
-                    <Text>Join Party</Text>
+                  <TouchableOpacity style={styles.joinButton} onPress={joinParty}>
+                    <Text style={styles.joinButtonText}>Join Party</Text>
                   </TouchableOpacity>
-                </View>
         </View>
         
-        {message ? <Text style={styles.itemName}>{message}</Text> : null}
+        {message ? <Text style={styles.message}>{message}</Text> : null}
 
         {members.map((member, index) => (
         <View key={index} style={styles.row}>
@@ -117,20 +120,23 @@ export default function Party() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#EDEDED', padding: 24 },
+    container: { flex: 1, backgroundColor: COOL_GRAY_BG, padding: 24 },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 24,
     },
     backButton: { paddingRight: 12 },
-    backIcon: { fontSize: 34, color: '#111', lineHeight: 34 },
-    title: { flex: 1, fontSize: 24, fontWeight: '700', color: '#111', textAlign: 'center', marginRight: 34 },
+    backIcon: { fontSize: 34, color: DEEP_OCEAN, lineHeight: 34 },
+    title: { flex: 1, fontSize: 24, fontWeight: '700', color: DEEP_OCEAN, textAlign: 'center', marginRight: 34 },
     card: {
-        backgroundColor: '#fff',
+        backgroundColor: WHITE,
         borderRadius: 16,
         paddingVertical: 18,
         paddingHorizontal: 20,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: COOL_GRAY,
         shadowColor: '#000',
         shadowOpacity: 0.06,
         shadowRadius: 12,
@@ -145,17 +151,39 @@ const styles = StyleSheet.create({
 
      input: {
     height: 50,
-    borderColor: '#ccc',
+    borderColor: COOL_GRAY,
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 10,
     paddingHorizontal: 15,
-    marginBottom: 15,
+    marginBottom: 12,
+    backgroundColor: WHITE,
+    color: DEEP_OCEAN,
+    fontSize: 15,
   },
-  
-  displayText: {
-    fontSize: 18,
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#5A6B7D',
+    marginBottom: 6,
+  },
+  joinButton: {
+    backgroundColor: DEEP_OCEAN,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  joinButtonText: {
+    color: WHITE,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  message: {
+    fontSize: 15,
+    color: DEEP_OCEAN,
+    textAlign: 'center',
+    marginBottom: 12,
   },
 
-  itemName: { fontSize: 15, color: '#333', flex: 1 },
-  itemPrice: { fontSize: 15, color: '#333', fontVariant: ['tabular-nums'] },
+  itemName: { fontSize: 15, color: DEEP_OCEAN, flex: 1 },
+  itemPrice: { fontSize: 15, color: DEEP_OCEAN, fontVariant: ['tabular-nums'], fontWeight: '600' },
 });

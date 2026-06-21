@@ -6,11 +6,12 @@ export default function RootLayout() {
   return (
     <>
       <Stack>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="index" options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name = "tip/[id]" options={{headerShown: false}} />
         <Stack.Screen name="receipts/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="party" options={{ headerShown: false }} />
         <Stack.Screen name = "split/[id]" options = {{headerShown: false}} />
+        <Stack.Screen name="totals/[id]" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
     </>

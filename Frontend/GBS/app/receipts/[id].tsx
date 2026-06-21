@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { getApiUrl } from "@/utils/api";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -9,6 +10,11 @@ import {
     View,
 } from 'react-native';
 import {useEffect, useState} from "react";
+
+const DEEP_OCEAN = '#1E3A5F';
+const COOL_GRAY = '#C5CDD6';
+const COOL_GRAY_BG = '#E4E9EE';
+const WHITE = '#FFFFFF';
 
 export default function Receipt() {
     const { id } = useLocalSearchParams();
@@ -60,6 +66,9 @@ export default function Receipt() {
         // setItems(dataInfo.info.data[0].items);
         setJoinCode(dataInfo.info.partyJoinCode);
         setPartyID(dataInfo.info.partyID);
+        if (dataInfo.info.tip != null) {
+            setTips(dataInfo.info.tip);
+        }
       };
       getInfo();
     }, [id])
@@ -68,7 +77,12 @@ export default function Receipt() {
     if (!partyID) return;
      const response = await fetch(`${getApiUrl()}/displayMembers?partyID=${partyID}`);
      const data = await response.json();
-     setMembers(data.members || []);
+     const memberList = data.members || [];
+     setMembers(memberList);
+     const leader = memberList.find((m: { partyRole: string }) => m.partyRole === 'Leader');
+     if (leader?.user && leader.user !== 'Guest') {
+        setUN((current) => current || leader.user);
+     }
     };
 
     useEffect(() => { // 
@@ -111,6 +125,13 @@ export default function Receipt() {
                 </TouchableOpacity>
                 <Text style={styles.title}>Review & Invite</Text>
             </View>
+
+            <ScrollView
+                style={styles.scroll}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+            >
             <View style={styles.card}>
                 {items && Object.entries(items).map(([name, price]) => (
                     <View key={name} style={styles.row}>
@@ -124,7 +145,7 @@ export default function Receipt() {
                 <View style={styles.card}>
                     <View style={styles.row}>
                         <Text style={styles.itemName}>Tip</Text>
-                        <Text style={styles.itemPrice}>${Number(tip).toFixed(2)}</Text>
+                        <Text style={styles.itemPrice}>{Number(tip)}%</Text>
                     </View>
                 </View>
             )}
@@ -137,52 +158,67 @@ export default function Receipt() {
             </View>
             
              <View style={styles.card}>
-            
-                <Text style={styles.itemName}>Enter New Item Name:</Text>
+                <Text style={styles.fieldLabel}>Name</Text>
                     <TextInput
                         style={styles.input}
                         onChangeText={setNewItem}
                         value={newItem}
+                        placeholder="Enter item name"
+                        placeholderTextColor={COOL_GRAY}
                     />
 
-                <Text style={styles.itemName}>Enter New Item Price:</Text>
+                <Text style={styles.fieldLabel}>Price</Text>
                     <TextInput
                         style={styles.input}
                         onChangeText={setNewPrice}
                         value={newPrice}
+                        placeholder="0.00"
+                        placeholderTextColor={COOL_GRAY}
+                        keyboardType="decimal-pad"
                     />
                     
-                    <TouchableOpacity onPress={addItem}>
-                        <Text>Add Item </Text>
+                    <TouchableOpacity style={styles.actionButton} onPress={addItem}>
+                        <Text style={styles.actionButtonText}>Add Item </Text>
                     </TouchableOpacity>
             </View>
 
             <View style={styles.card}>
-             <View style={styles.row}>
-                <Text style={styles.itemName}>Enter Username:</Text>
+                <Text style={styles.fieldLabel}>Username</Text>
                     <TextInput
                         style={styles.input}
                         onChangeText={setUN}
                         value={userName}
+                        placeholder="Enter username"
+                        placeholderTextColor={COOL_GRAY}
                     />
                     
-                    <TouchableOpacity onPress={updateUsername}>
-                        <Text>Confirm </Text>
+                    <TouchableOpacity style={styles.actionButton} onPress={updateUsername}>
+                        <Text style={styles.actionButtonText}>Confirm </Text>
                     </TouchableOpacity>
-             </View>
             </View>
 
+            {partyID ? (
+                <View style={styles.card}>
+                    <Text style={styles.fieldLabel}>Party Members</Text>
+                    {[...members]
+                        .sort((a, b) => {
+                            if (a.partyRole === 'Leader') return -1;
+                            if (b.partyRole === 'Leader') return 1;
+                            return 0;
+                        })
+                        .map((member, index) => (
+                        <View key={index} style={styles.memberRow}>
+                            <Text style={styles.itemName}>{member.user}</Text>
+                            <Text style={styles.memberRole}>{member.partyRole}</Text>
+                        </View>
+                    ))}
+                </View>
+            ) : null}
 
             <TouchableOpacity style={styles.splitButton} onPress={goToSplit}>
                 <Text style={styles.splitButtonText}>Split Items</Text>
             </TouchableOpacity>
-
-            {members.map((member, index) => (
-                <View key={index} style={styles.row}>
-                    <Text style={styles.itemName}>{member.user}</Text>
-                    <Text style={styles.itemPrice}>{member.partyRole}</Text>
-                </View>
-            ))}
+            </ScrollView>
                 
             
         </SafeAreaView>
@@ -190,20 +226,27 @@ export default function Receipt() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#EDEDED', padding: 24 },
+    container: { flex: 1, backgroundColor: COOL_GRAY_BG },
+    scroll: { flex: 1 },
+    scrollContent: { paddingHorizontal: 24, paddingBottom: 32 },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 24,
+        paddingHorizontal: 24,
+        paddingTop: 8,
     },
     backButton: { paddingRight: 12 },
-    backIcon: { fontSize: 34, color: '#111', lineHeight: 34 },
-    title: { flex: 1, fontSize: 24, fontWeight: '700', color: '#111', textAlign: 'center', marginRight: 34 },
+    backIcon: { fontSize: 34, color: DEEP_OCEAN, lineHeight: 34 },
+    title: { flex: 1, fontSize: 24, fontWeight: '700', color: DEEP_OCEAN, textAlign: 'center', marginRight: 34 },
     card: {
-        backgroundColor: '#fff',
+        backgroundColor: WHITE,
         borderRadius: 16,
         paddingVertical: 18,
         paddingHorizontal: 20,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: COOL_GRAY,
         shadowColor: '#000',
         shadowOpacity: 0.06,
         shadowRadius: 12,
@@ -218,28 +261,64 @@ const styles = StyleSheet.create({
 
      input: {
     height: 50,
-    borderColor: '#ccc',
+    borderColor: COOL_GRAY,
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 10,
     paddingHorizontal: 15,
-    marginBottom: 15,
+    marginBottom: 12,
+    backgroundColor: WHITE,
+    color: DEEP_OCEAN,
+    fontSize: 15,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#5A6B7D',
+    marginBottom: 6,
   },
   
   displayText: {
     fontSize: 18,
   },
 
-  itemName: { fontSize: 15, color: '#333', flex: 1 },
-  itemPrice: { fontSize: 15, color: '#333', fontVariant: ['tabular-nums'] },
+  itemName: { fontSize: 15, color: DEEP_OCEAN, flex: 1 },
+  itemPrice: { fontSize: 15, color: DEEP_OCEAN, fontVariant: ['tabular-nums'], fontWeight: '600' },
+  memberRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COOL_GRAY,
+  },
+  memberRole: {
+    fontSize: 13,
+    color: '#5A6B7D',
+    fontWeight: '600',
+  },
+  actionButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: COOL_GRAY_BG,
+    borderWidth: 1,
+    borderColor: COOL_GRAY,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  actionButtonText: {
+    color: DEEP_OCEAN,
+    fontWeight: '600',
+    fontSize: 15,
+  },
   splitButton: {
     marginTop: 16,
-    backgroundColor: '#22C55E',
+    backgroundColor: DEEP_OCEAN,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
   },
   splitButtonText: {
-    color: '#fff',
+    color: WHITE,
     fontSize: 16,
     fontWeight: '600',
   },
