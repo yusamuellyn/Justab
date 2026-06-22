@@ -8,6 +8,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Pressable,
   StyleSheet,
   TouchableOpacity,
@@ -29,6 +30,9 @@ export default function Photo() {
   const [facing, setFacing] = useState<CameraType>('back');
   const [flash, setFlash] = useState<FlashMode>('off');
   const cameraRef = useRef<CameraView | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
+  const [error, setError] = useState(false);
   const router = useRouter();
 
   if (!permission) {
@@ -51,61 +55,92 @@ export default function Photo() {
   const takePhoto = async () => {
     if (!cameraRef.current) return;
 
-    const photo = await cameraRef.current.takePictureAsync({ quality: 1 });
+    try {
+      //take photo
+      setLoading(true);
+      setLoadingMessage('Uploading');
+      const photo = await cameraRef.current.takePictureAsync({ quality: 1 });
 
-    const formData = new FormData();
-    formData.append('file', {
-      uri: photo.uri,
-      name: 'receipt.jpg',
-      type: 'image/jpeg',
-    } as any);
+      const formData = new FormData();
+      formData.append('file', {
+        uri: photo.uri,
+        name: 'receipt.jpg',
+        type: 'image/jpeg',
+      } as any);
 
-    const uploadPhoto = await fetch(`${getApiUrl()}/upload`, {
-      method: 'POST',
-      body: formData,
-    });
+      const uploadPhoto = await fetch(`${getApiUrl()}/upload`, {
+        method: 'POST',
+        body: formData,
+      });
 
-    const data = await uploadPhoto.json();
-    console.log('upload response:', data);
+      const data = await uploadPhoto.json();
+      console.log('upload response:', data);
+      if (!uploadPhoto.ok) {
+        throw new Error(`Upload Failed ${uploadPhoto.status}`);
+      }
+  
+      router.push(`/tip/${data.id}` as any);
+    } catch (error) {
+      
+      setError(true);
+      setTimeout(()=> setError(false), 3000);
+      
 
-    if (!uploadPhoto.ok) {
-      throw new Error(`Upload Failed ${uploadPhoto.status}`);
+    } finally {
+      setLoading(false);
+      setLoadingMessage('');
     }
+    
 
-    router.push(`/tip/${data.id}` as any);
+    
   };
 
   const pickFromGallery = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') return;
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 1,
-    });
-
-    if (result.canceled || !result.assets[0]?.uri) return;
-
-    const formData = new FormData();
-    formData.append('file', {
-      uri: result.assets[0].uri,
-      name: 'receipt.jpg',
-      type: 'image/jpeg',
-    } as any);
-
-    const uploadPhoto = await fetch(`${getApiUrl()}/upload`, {
-      method: 'POST',
-      body: formData,
-    });
-
-    const data = await uploadPhoto.json();
-    console.log('upload response:', data);
-
-    if (!uploadPhoto.ok) {
-      throw new Error(`Upload Failed ${uploadPhoto.status}`);
+    try {
+      
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 1,
+      });
+  
+      if (result.canceled || !result.assets[0]?.uri) return;
+      setLoading(true);
+      setLoadingMessage('Uploading');
+  
+      const formData = new FormData();
+      formData.append('file', {
+        uri: result.assets[0].uri,
+        name: 'receipt.jpg',
+        type: 'image/jpeg',
+      } as any);
+  
+      const uploadPhoto = await fetch(`${getApiUrl()}/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+  
+      const data = await uploadPhoto.json();
+      console.log('upload response:', data);
+  
+      if (!uploadPhoto.ok) {
+        throw new Error(`Upload Failed ${uploadPhoto.status}`);
+      }
+      if (!data.id) {
+        throw new Error(data.error || 'Invalid receipt');
+      }
+  
+      router.push(`/tip/${data.id}` as any);
+    } catch (error) {
+      setError(true);
+      setTimeout(()=> setError(false), 3000);
+    }finally{
+      setLoading(false);
+      setLoadingMessage('');
     }
-
-    router.push(`/tip/${data.id}` as any);
+    
   };
 
   const flashIcon =
@@ -114,6 +149,19 @@ export default function Photo() {
   return (
     <View style={styles.fill}>
       <View style={styles.cameraSection}>
+      {loading && (
+        <View style={styles.loadingBanner}>
+          <ActivityIndicator size="small" color={WHITE} />
+          <Text style={styles.loadingBannerText}>Loading...</Text>
+        </View>
+      )}
+      {error && (
+      <View style={styles.errorBanner}>
+        <Ionicons name="alert-circle-outline" size={16} color={WHITE} />
+        <Text style={styles.errorBannerText}>Upload failed. Try again.</Text>
+      </View>
+      )}
+
         <CameraView
           ref={(ref) => {
             cameraRef.current = ref;
@@ -359,5 +407,41 @@ const styles = StyleSheet.create({
     height: 46,
     borderRadius: 23,
     backgroundColor: DEEP_OCEAN,
+  },
+  errorBanner: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#C0392B',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    gap: 8,
+    zIndex: 30,
+  },
+  loadingBanner: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: DEEP_OCEAN,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    gap: 8,
+    zIndex: 30,
+  },
+  loadingBannerText: {
+    color: WHITE,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  errorBannerText: {
+    color: WHITE,
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
