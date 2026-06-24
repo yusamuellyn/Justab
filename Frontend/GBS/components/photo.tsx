@@ -9,6 +9,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   StyleSheet,
   TouchableOpacity,
@@ -52,6 +53,7 @@ export default function Photo() {
     );
   }
 
+  
   const takePhoto = async () => {
     if (!cameraRef.current) return;
 
@@ -78,6 +80,18 @@ export default function Photo() {
       if (!uploadPhoto.ok) {
         throw new Error(`Upload Failed ${uploadPhoto.status}`);
       }
+
+      if (data.warning) {
+        Alert.alert(
+          "Couldn't Find Items",
+          "We couldn't detect any items on the receipt. You can still manually the add items.",
+          [
+            { text: 'Try Again' },
+            { text: 'Continue', onPress: () => router.push(`/tip/${data.id}` as any) },
+          ]
+        );
+        return;
+      }
   
       router.push(`/tip/${data.id}` as any);
     } catch (error) {
@@ -90,9 +104,6 @@ export default function Photo() {
       setLoading(false);
       setLoadingMessage('');
     }
-    
-
-    
   };
 
   const pickFromGallery = async () => {
