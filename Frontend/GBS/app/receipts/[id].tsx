@@ -32,7 +32,7 @@ export default function Receipt() {
 
     const [members, setMembers] = useState<any[]>([]);
 
-    const goToSplit = () => { // DEAL WITH NOT CONNECTING TO BACKEND LATER. THEN OCR FRIDAY.
+    const goToSplit = () => { 
       if (!items || !userName) return;
         router.push(`/split/${partyID}?userName=${userName}` as any);
     };
@@ -48,7 +48,7 @@ export default function Receipt() {
     //         pathname: `/split/${id}` as any,
     //         params: { items: JSON.stringify(itemList) },
     //     });
-    // };
+    // }; 
 
     useEffect(() => {
       const getInfo = async () => {
@@ -117,6 +117,16 @@ export default function Receipt() {
         setNewPrice('');
     };
 
+
+    const removeItem = async (itemName: string) => {
+     const response = await fetch(
+        `${getApiUrl()}/removeItem?id=${id}&itemName=${encodeURIComponent(itemName)}`,
+        { method: 'POST' }
+     );
+     const data = await response.json();
+     setItems(data.items);
+    };
+
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
@@ -137,6 +147,10 @@ export default function Receipt() {
                     <View key={name} style={styles.row}>
                         <Text style={styles.itemName}>{name}</Text>
                         <Text style={styles.itemPrice}>${Number(price).toFixed(2)}</Text>
+
+                        <TouchableOpacity onPress={() => removeItem(name)}>
+                         <Text style={{ color: 'red' }}>✕</Text>
+                        </TouchableOpacity>
                     </View>
                 ))}
             </View>
