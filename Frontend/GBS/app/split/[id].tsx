@@ -10,7 +10,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getApiUrl } from '@/utils/api';
 
-const GREEN = '#22C55E';
+const DEEP_OCEAN = '#1E3A5F';
+const COOL_GRAY = '#C5CDD6';
+const COOL_GRAY_BG = '#E4E9EE';
+const WHITE = '#FFFFFF';
 
 type Item = {
   name: string;
@@ -66,7 +69,7 @@ export default function Split() {
               <Ionicons
                 name={isMine ? 'checkbox' : 'square-outline'}
                 size={24}
-                color={isMine ? GREEN : '#999'}
+                color={isMine ? DEEP_OCEAN : COOL_GRAY}
               />
               <View style={{ flex: 1 }}>
                 <Text style={styles.itemName}>{item.name}</Text>
@@ -96,23 +99,30 @@ export default function Split() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#EDEDED', padding: 24 },
-  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
+  container: { flex: 1, backgroundColor: COOL_GRAY_BG, padding: 24 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+    paddingTop: 8,
+  },
   backButton: { paddingRight: 12 },
-  backIcon: { fontSize: 34, color: '#111', lineHeight: 34 },
+  backIcon: { fontSize: 34, color: DEEP_OCEAN, lineHeight: 34 },
   title: {
     flex: 1,
     fontSize: 24,
     fontWeight: '700',
-    color: '#111',
+    color: DEEP_OCEAN,
     textAlign: 'center',
     marginRight: 34,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: WHITE,
     borderRadius: 16,
     paddingVertical: 18,
     paddingHorizontal: 20,
+    borderWidth: 1,
+    borderColor: COOL_GRAY,
     shadowColor: '#000',
     shadowOpacity: 0.06,
     shadowRadius: 12,
@@ -120,16 +130,20 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 12 },
-  itemName: { fontSize: 15, color: '#333' },
-  claimedBy: { fontSize: 12, color: '#888', marginTop: 2 },
-  itemPrice: { fontSize: 15, color: '#333', fontVariant: ['tabular-nums'] },
-
+  itemName: { fontSize: 15, color: DEEP_OCEAN },
+  claimedBy: { fontSize: 12, color: '#5A6B7D', marginTop: 2 },
+  itemPrice: {
+    fontSize: 15,
+    color: DEEP_OCEAN,
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
+  },
   doneButton: {
-    backgroundColor: GREEN,
+    backgroundColor: DEEP_OCEAN,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 20,
   },
-  doneText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  doneText: { color: WHITE, fontSize: 16, fontWeight: '600' },
 });
