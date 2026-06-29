@@ -136,20 +136,18 @@ export default function Receipt() {
                 <Text style={styles.title}>Review & Invite</Text>
             </View>
 
-            
-            { /* DISCLAIMER IF NEEDED
-            <View style={styles.card}>
-                <Text style={{ color: '#5A6B7D', fontSize: 13, textAlign: 'center' }}>
-                    Items may be incorrectly recognized in early versions, especially with complex receipts. Please re-enter items with any issues.
-                </Text>
-            </View> */  }
-
             <ScrollView
                 style={styles.scroll}
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
             >
+            <View style={styles.card}>
+                <Text style={styles.disclaimerText}>
+                    Items may be incorrectly recognized in early versions, especially with complex receipts. Please re-enter items with any issues.
+                </Text>
+            </View>
+
             <View style={styles.card}>
                 {items && Object.entries(items).map(([name, price]) => (
                     <View key={name} style={styles.row}>
@@ -297,6 +295,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#5A6B7D',
     marginBottom: 6,
+  },
+  disclaimerText: {
+    color: '#5A6B7D',
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 20,
   },
   
   displayText: {
