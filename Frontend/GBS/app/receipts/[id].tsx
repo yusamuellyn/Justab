@@ -136,6 +136,14 @@ export default function Receipt() {
                 <Text style={styles.title}>Review & Invite</Text>
             </View>
 
+            
+            { /* DISCLAIMER IF NEEDED
+            <View style={styles.card}>
+                <Text style={{ color: '#5A6B7D', fontSize: 13, textAlign: 'center' }}>
+                    Items may be incorrectly recognized in early versions, especially with complex receipts. Please re-enter items with any issues.
+                </Text>
+            </View> */  }
+
             <ScrollView
                 style={styles.scroll}
                 contentContainerStyle={styles.scrollContent}

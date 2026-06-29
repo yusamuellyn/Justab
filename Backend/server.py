@@ -24,7 +24,7 @@ load_dotenv()
 
 import random
 
-pytesseract.pytesseract.tesseract_cmd = r'/opt/homebrew/bin/tesseract'
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 
 # if platform.system() == 'Windows':
@@ -148,6 +148,7 @@ async def upload_image(file: UploadFile = File(...)):
             item_array = []
             totalPrice = None
             taxPrice = None
+            tipPrice = None
 
             for i in range(len(text_norm) - 2):
                 if text_norm[i] == '.':
@@ -185,15 +186,19 @@ async def upload_image(file: UploadFile = File(...)):
                 norm_l = line_div_norm[idx] if idx < len(line_div_norm) else l
                 seen_in_line = set()
                 for h in range(len(price_array)):
-                    if price_array[h] in norm_l and price_array[h] not in seen_in_line:
+                    if price_array[h] is not None and price_array[h] in norm_l and price_array[h] not in seen_in_line:
                         seen_in_line.add(price_array[h])
                         pos = norm_l.find(price_array[h])
                         l_split = l[:pos]
                         letters_only = re.sub(r'[^a-zA-Z\s]', '', l_split)
 
                         words = letters_only.strip().split()
-                        while words and len(words[0]) <= 2:
-                            words.pop(0)
+                        # ADD BACK - CAUSES NORMAL 2 WORD THINGS TO REVERT TO "ITEM NAME"
+                        # removed = 0
+                        # while words and len(words[0]) <= 2 and removed < 3:
+                        #     words.pop(0)
+                        #     removed += 1
+
                         while words and len(words[-1]) <= 1:
                             words.pop()
                         cleaned_name = ' '.join(words)
@@ -206,10 +211,18 @@ async def upload_image(file: UploadFile = File(...)):
                                 totalPrice = price_array[h]
                             elif 'tax' in line_lower:
                                 taxPrice = price_array[h]
+                            elif 'tip' in line_lower:
+                                tipPrice = price_array[h]
+                            price_array[h] = None
                             continue
-
+    
                         if cleaned_name:
                             item_array.append(cleaned_name)
+                        else:
+                            item_array.append(f"Item {len(item_array) + 1}")
+
+            # Remove None values after loop completes
+            price_array = [p for p in price_array if p is not None]
 
             for s in range(min(len(price_array), len(item_array)) - 1, -1, -1):
                 if any(should_ignore(word, ignore_words) for word in item_array[s].strip().lower().split()):
@@ -217,7 +230,7 @@ async def upload_image(file: UploadFile = File(...)):
                     item_array.remove(item_array[s])
 
             if len(price_array) == 0:
-                return None, None, None, None
+                return None, None, None, None, None
 
             else:
                 item_button_display = []
@@ -233,9 +246,9 @@ async def upload_image(file: UploadFile = File(...)):
                     for a in range(len(price_array)):
                         item_button_display.append(f"Item {a + 1}")
 
-                return price_array, item_button_display, totalPrice, taxPrice
+                return price_array, item_button_display, totalPrice, taxPrice, tipPrice
             
-        price_array, items, totalPrice, taxPrice = process_receipt(resp)
+        price_array, items, totalPrice, taxPrice, tipPrice = process_receipt(resp)
         partyJoinCode = makeCode()
         partyID = makeID()
 
@@ -245,7 +258,6 @@ async def upload_image(file: UploadFile = File(...)):
             "user": "Leader",
         }).execute()
 
-        # ✅ If receipt couldn't be parsed, still create row and return id with warning
         if items is None:
             response = supabase.table("receipts").insert({
                 "receipt_url": public_url,
@@ -253,7 +265,8 @@ async def upload_image(file: UploadFile = File(...)):
                 "tax": None,
                 "partyJoinCode": partyJoinCode,
                 "total": None,
-                "partyID": partyID
+                "partyID": partyID,
+                "tip": tipPrice,
             }).execute()
             return {"warning": True, "id": response.data[0]["id"]}
 
@@ -273,7 +286,8 @@ async def upload_image(file: UploadFile = File(...)):
             "tax": taxPrice,
             "partyJoinCode": partyJoinCode,
             "total": totalPrice,
-            "partyID": partyID
+            "partyID": partyID,
+            "tip": tipPrice,
         }).execute()
 
         return {"id": response.data[0]["id"]}

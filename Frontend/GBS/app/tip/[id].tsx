@@ -59,7 +59,7 @@ export default function Tip() {
       <View style={styles.content}>
         <View style={styles.card}>
           <Text style={styles.title}>Enter Tip Percent</Text>
-          <Text style={styles.subtitle}>Choose how much you want to tip on the subtotal</Text>
+          <Text style={styles.subtitle}>Choose how much you want to tip on the subtotal. If tip is already included please enter 0. </Text>
 
           <View style={styles.inputRow}>
             <TextInput
