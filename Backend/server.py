@@ -24,7 +24,11 @@ load_dotenv()
 
 import random
 
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+pytesseract.pytesseract.tesseract_cmd = os.environ.get(
+  'TESSERACT_CMD',
+  '/usr/bin/tesseract'
+)
+
 
 
 # if platform.system() == 'Windows':
@@ -139,6 +143,10 @@ async def upload_image(file: UploadFile = File(...)):
 
             text_norm = re.sub(r'[lI|]', '1', text)
             text_norm = re.sub(r'[@oO]', '0', text_norm)
+            text_norm = re.sub(r'[Ss](?=\d)', '5', text)   # S misread as 5
+            text_norm = re.sub(r'[Zz](?=\d)', '2', text)   # Z misread as 2
+            text_norm = re.sub(r'(?<=\d)[Bb]', '8', text)  # B misread as 8 after digit
+            text_norm = re.sub(r'\bRlVI\b|\bRlM\b', 'RM',  text)  # RM currency symbol
 
             line_div = text.split('\n')
             line_div_norm = text_norm.split('\n')
@@ -191,8 +199,8 @@ async def upload_image(file: UploadFile = File(...)):
                         pos = norm_l.find(price_array[h])
                         l_split = l[:pos]
                         letters_only = re.sub(r'[^a-zA-Z\s]', '', l_split)
-
                         words = letters_only.strip().split()
+                        
                         # ADD BACK - CAUSES NORMAL 2 WORD THINGS TO REVERT TO "ITEM NAME"
                         # removed = 0
                         # while words and len(words[0]) <= 2 and removed < 3:
