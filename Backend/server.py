@@ -24,7 +24,11 @@ load_dotenv()
 
 import random
 
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+pytesseract.pytesseract.tesseract_cmd = os.environ.get(
+  'TESSERACT_CMD',
+  '/usr/bin/tesseract'
+)
+
 
 
 # if platform.system() == 'Windows':
@@ -334,6 +338,150 @@ async def upload_image(file: UploadFile = File(...)):
 
         party_join_code = makeCode()
         party_id        = makeID()
+       
+        resp = requests.get(public_url)
+
+        ssl._create_default_https_context = ssl._create_unverified_context
+        nltk.download('words', quiet=True)
+        from nltk.corpus import words as english_words
+        english_word_set = set(w.lower() for w in english_words.words())
+
+        def is_real_word(word):
+            return bool(get_close_matches(word.lower(), english_word_set, n=1, cutoff=0.9))
+
+        ignore_words = ['sr', 'zrl', 'tumt', 'zr', 'cash', 'change', 'total', 'subtotal', 'gst', 'tax', 'amount', 'cashier', 'summary', 'payment', 'details', 'count', 'iten', 'tlrh', 'rm', 'funding', 'adjustment', 'rounding', 'rounded', 'desc', 'qty', 'price', 'disc', 'gratuity', '%']
+        def should_ignore(word, ignore_words, cutoff=0.85):
+            return bool(get_close_matches(word.strip().lower(), ignore_words, n=1, cutoff=cutoff))
+
+        def process_receipt(image_path):
+
+            img = cv2.imdecode(np.asarray(bytearray(image_path.content), dtype="uint8"), cv2.IMREAD_COLOR)
+           
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            gray = cv2.resize(gray, None, fx=1.5, fy=1.5, interpolation=cv2.INTER_CUBIC)
+            _, gray = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+            custom_config = r'--oem 3 --psm 6'
+            text = pytesseract.image_to_string(gray, config=custom_config)
+
+            text_norm = re.sub(r'[lI|]', '1', text)
+            text_norm = re.sub(r'[@oO]', '0', text_norm)
+            text_norm = re.sub(r'[Ss](?=\d)', '5', text)   # S misread as 5
+            text_norm = re.sub(r'[Zz](?=\d)', '2', text)   # Z misread as 2
+            text_norm = re.sub(r'(?<=\d)[Bb]', '8', text)  # B misread as 8 after digit
+            text_norm = re.sub(r'\bRlVI\b|\bRlM\b', 'RM',  text)  # RM currency symbol
+
+            line_div = text.split('\n')
+            line_div_norm = text_norm.split('\n')
+
+            number_array = ['1','2','3','4', '5', '6', '7', '8', '9', '0']
+            price_array = []
+            item_array = []
+            totalPrice = None
+            taxPrice = None
+            tipPrice = None
+
+            for i in range(len(text_norm) - 2):
+                if text_norm[i] == '.':
+                    if text_norm[i+1] in number_array:
+                        if text_norm[i+2] in number_array:
+
+                            j = i - 1
+                            int_num = ''
+
+                            while j >= 0 and text_norm[j] in number_array:
+                                int_num = text_norm[j] + int_num
+                                j -= 1
+
+                            if i + 3 < len(text_norm) and text_norm[i+3].isdigit():
+                                continue
+
+                            char_before = text_norm[j] if j >= 0 else ' '
+                            if char_before.isalpha() or char_before.isdigit():
+                                continue
+
+                            price = int_num + text_norm[i] + text_norm[i+1] + text_norm[i+2]
+                            if re.match(r'^\d{1,4}\.\d{2}$', price):
+                                price_array.append(price)
+
+            filtered_price_array = []
+            for l in line_div_norm:
+                prices_in_line = [p for p in price_array if p in l]
+                if prices_in_line:
+                    last_price = max(prices_in_line, key=lambda p: l.rfind(p))
+                    if last_price not in filtered_price_array:
+                        filtered_price_array.append(last_price)
+            price_array = filtered_price_array
+
+            for idx, l in enumerate(line_div):
+                norm_l = line_div_norm[idx] if idx < len(line_div_norm) else l
+                seen_in_line = set()
+                for h in range(len(price_array)):
+                    if price_array[h] is not None and price_array[h] in norm_l and price_array[h] not in seen_in_line:
+                        seen_in_line.add(price_array[h])
+                        pos = norm_l.find(price_array[h])
+                        l_split = l[:pos]
+                        letters_only = re.sub(r'[^a-zA-Z\s]', '', l_split)
+                        words = letters_only.strip().split()
+                        
+                        # ADD BACK - CAUSES NORMAL 2 WORD THINGS TO REVERT TO "ITEM NAME"
+                        # removed = 0
+                        # while words and len(words[0]) <= 2 and removed < 3:
+                        #     words.pop(0)
+                        #     removed += 1
+
+                        while words and len(words[-1]) <= 1:
+                            words.pop()
+                        cleaned_name = ' '.join(words)
+
+                        line_lower = l.lower()
+                        skip_keywords = {'subtotal', 'sub total', 'total', 'tax', 'tip', 'tend', 'change', 'cash'}
+
+                        if any(kw in line_lower for kw in skip_keywords):
+                            if 'total' in line_lower and 'sub' not in line_lower and 'subtotal' not in line_lower:
+                                totalPrice = price_array[h]
+                            elif 'tax' in line_lower:
+                                taxPrice = price_array[h]
+                            elif 'tip' in line_lower:
+                                tipPrice = price_array[h]
+                            price_array[h] = None
+                            continue
+    
+                        if cleaned_name:
+                            item_array.append(cleaned_name)
+                        else:
+                            item_array.append(f"Item {len(item_array) + 1}")
+
+            # Remove None values after loop completes
+            price_array = [p for p in price_array if p is not None]
+
+            for s in range(min(len(price_array), len(item_array)) - 1, -1, -1):
+                if any(should_ignore(word, ignore_words) for word in item_array[s].strip().lower().split()):
+                    price_array.remove(price_array[s])
+                    item_array.remove(item_array[s])
+
+            if len(price_array) == 0:
+                return None, None, None, None, None
+
+            else:
+                item_button_display = []
+
+                if len(item_array) != 0:
+                    for a in range(len(price_array)):
+                        words = item_array[a].strip().lower().split() if a < len(item_array) else []
+                        if any(is_real_word(word) for word in words):
+                            item_button_display.append(f"{item_array[a].strip()}")
+                        else:
+                            item_button_display.append(f"Item {a + 1}")
+                else:
+                    for a in range(len(price_array)):
+                        item_button_display.append(f"Item {a + 1}")
+
+                return price_array, item_button_display, totalPrice, taxPrice, tipPrice
+            
+        price_array, items, totalPrice, taxPrice, tipPrice = process_receipt(resp)
+        partyJoinCode = makeCode()
+        partyID = makeID()
 
         supabase.table("partyMaking").insert({
             "partyID":   party_id,
