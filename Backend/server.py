@@ -163,9 +163,15 @@ PRICE_RE = re.compile(r'(?<!\d)(\d{1,4}\.\d{2})(?!\d)')
 
 
 def is_real_word(word: str) -> bool:
-    return bool(get_close_matches(word.lower(), ENGLISH_WORD_SET, n=1, cutoff=0.85))
+    w = word.lower()
+    if w in ENGLISH_WORD_SET:
+        return True
+    # only fuzzy-match short candidate lists, not the full 236k set
+    candidates = [x for x in ENGLISH_WORD_SET if abs(len(x) - len(w)) <= 1 and x[0] == w[0]]
+    return bool(get_close_matches(w, candidates, n=1, cutoff=0.85))
 
-
+# def is_real_word(word: str) -> bool:
+#     return bool(get_close_matches(word.lower(), ENGLISH_WORD_SET, n=1, cutoff=0.85))
 
 
 def should_ignore(word: str, cutoff: float = 0.85) -> bool:
@@ -188,14 +194,15 @@ def preprocess_image(img_bytes: bytes) -> np.ndarray:
 
 
     # 2× upscale — gives Tesseract more pixel detail to work with
-    img = cv2.resize(img, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC)
+    img = cv2.resize(img, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_LINEAR) #INTER_CUBIC
 
 
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 
     # Bilateral filter: smooths noise while preserving character edges
-    gray = cv2.bilateralFilter(gray, d=9, sigmaColor=75, sigmaSpace=75)
+    gray = cv2.medianBlur(gray, 3)
+    # gray = cv2.bilateralFilter(gray, d=9, sigmaColor=75, sigmaSpace=75)
 
 
     # Adaptive threshold handles uneven lighting/shadows far better than global Otsu
@@ -378,24 +385,19 @@ async def upload_image(file: UploadFile = File(...)): # Repeated File Name
 
         public_url = supabase.storage.from_("receipts").get_public_url(file_path)
 
-
-        resp = requests.get(public_url, timeout=10)
-        resp.raise_for_status()  # surface HTTP errors immediately
-
-
         # OCR runs before any DB writes so we don't burn IDs on a failed parse
-        price_array, items, total_price, tax_price, tip_price = process_receipt(resp.content)
+        price_array, items, total_price, tax_price, tip_price = process_receipt(contents)
 
 
         party_join_code = makeCode()
         party_id        = makeID()
 
 
-        supabase.table("partyMaking").insert({
-            "partyID":   party_id,
-            "partyRole": "Leader",
-            "user":      "Leader",
-        }).execute()
+        # supabase.table("partyMaking").insert({
+        #     "partyID":   party_id,
+        #     "partyRole": "Leader",
+        #     "user":      "Leader",
+        # }).execute()
 
 
         if items is None:
