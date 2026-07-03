@@ -22,9 +22,10 @@ type Item = {
 };
 
 export default function Split() {
-  const { id, userName } = useLocalSearchParams<{ id: string; userName: string }>();
+  const { id, userName, role } = useLocalSearchParams<{ id: string; userName: string; role: string }>();
   const router = useRouter();
   const [items, setItems] = useState<Item[]>([]);
+  const isLeader = role === 'Leader';
 
   const getItems = async () => {
     if (!id) return;
@@ -39,12 +40,30 @@ export default function Split() {
     return () => clearInterval(interval);
   }, [id]);
 
+  useEffect(() => {
+    if (isLeader || !id) return;
+    const interval = setInterval(async () => {
+      const response = await fetch(`${getApiUrl()}/checkStatus?partyID=${id}`);
+      const data = await response.json();
+      if (data.status === 'totals') {
+        clearInterval(interval);
+        router.push(`../totals/${id}?userName=${userName}` as any);
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [id, isLeader]);
+
   const toggleItem = async (itemIndex: number) => {
     await fetch(
       `${getApiUrl()}/claimItem?itemIndex=${itemIndex}&userName=${userName}&partyID=${id}`,
       { method: 'POST' }
     );
     getItems();
+  };
+
+  const goToTotals = async () => {
+    await fetch(`${getApiUrl()}/setStatus?partyID=${id}&status=totals`, { method: 'POST' });
+    router.push(`../totals/${id}?userName=${userName}` as any);
   };
 
   return (
@@ -88,12 +107,13 @@ export default function Split() {
           );
         })}
       </View>
-      <TouchableOpacity
-        style={styles.doneButton}
-        onPress={() => router.push(`../totals/${id}?userName=${userName}`)}
-      >
-        <Text style={styles.doneText}>See Totals</Text>
-    </TouchableOpacity>
+      {isLeader ? (
+        <TouchableOpacity style={styles.doneButton} onPress={goToTotals}>
+          <Text style={styles.doneText}>See Totals</Text>
+        </TouchableOpacity>
+      ) : (
+        <Text style={styles.waitingText}>Waiting for host to continue…</Text>
+      )}
     </SafeAreaView>
   );
 }
@@ -146,4 +166,11 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   doneText: { color: WHITE, fontSize: 16, fontWeight: '600' },
+  waitingText: {
+    marginTop: 20,
+    textAlign: 'center',
+    color: '#5A6B7D',
+    fontSize: 14,
+    fontWeight: '500',
+  },
 });

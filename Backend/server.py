@@ -665,6 +665,13 @@ async def checkStatus(partyID: str):
         raise HTTPException(status_code=404, detail="Party not found")
     return {"status": response.data[0]["status"]}
 
+@app.post("/setStatus")
+async def setStatus(partyID: str, status: str):
+    response = supabase.table("receipts").update({"status": status}).eq("partyID", partyID).execute()
+    if not response.data:
+        raise HTTPException(status_code=404, detail="Party not found")
+    return {"status": status}
+
 @app.post("/manualAdd") # Post and Get Diff?
 async def addItem(id: int, itemName: str, itemPrice: str):
     response = supabase.table("receipts").select("items").eq("id", id).execute()

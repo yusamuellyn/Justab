@@ -32,9 +32,10 @@ export default function Receipt() {
 
     const [members, setMembers] = useState<any[]>([]);
 
-    const goToSplit = () => { 
+    const goToSplit = async () => {
       if (!items || !userName) return;
-        router.push(`/split/${partyID}?userName=${userName}` as any);
+        await fetch(`${getApiUrl()}/setStatus?partyID=${partyID}&status=splitting`, { method: 'POST' });
+        router.push(`/split/${partyID}?userName=${userName}&role=Leader` as any);
     };
 
     // const goToSplit = () => {

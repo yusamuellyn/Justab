@@ -23,6 +23,7 @@ export default function Party() {
   const [userName, setUN] = useState('');
   const [message, setMessage] = useState('');
   const [members, setMembers] = useState<any[]>([]);
+  const [joined, setJoined] = useState(false);
   
   const params = useLocalSearchParams(); 
   const [partyID, setPartyID] = useState<string | undefined>(params.partyID as string | undefined);
@@ -39,6 +40,13 @@ export default function Party() {
     getMembers();
   }, [partyID]);
 
+  useEffect(() => {
+    if (!joined || !partyID) return;
+    getMembers();
+    const interval = setInterval(getMembers, 3000);
+    return () => clearInterval(interval);
+  }, [joined, partyID]);
+
 
   const joinParty = async () => {
     const response = await fetch(`${getApiUrl()}/joinParty?code=${codeInput}&userName=${userName}`, {
@@ -48,9 +56,9 @@ export default function Party() {
     const data = await response.json()// 
 
     if (response.ok) {
-      setMessage('Joined party!');
       setPartyID(data.partyID);
-      router.push(`/split/${data.partyID}?userName=${userName}`);
+      setJoined(true);
+      startPolling(data.partyID, userName);
     } else {
       setMessage('Invalid code.');
     }
@@ -62,11 +70,38 @@ export default function Party() {
       const data = await response.json();
       if (data.status === 'splitting') {
         clearInterval(interval);
-        router.push(`/split/${id}?userName=${user}` as any);
+        router.push(`/split/${id}?userName=${user}&role=Member` as any);
       }
     }, 3000); // checks every 3 seconds
     return interval;
-  }; // UNDERSTAND LATER, USED TO ENSURE BOTH PARTY SIDES JOIN AT THE SAME TIME AT THE SPLIT SCREEN
+  }; // Members wait here until the leader starts the split
+
+  if (joined) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>In Party</Text>
+        </View>
+
+        <Text style={styles.waitingText}>Waiting for leader to split…</Text>
+
+        <View style={styles.card}>
+          {[...members]
+            .sort((a, b) => {
+              if (a.partyRole === 'Leader') return -1;
+              if (b.partyRole === 'Leader') return 1;
+              return 0;
+            })
+            .map((member, index) => (
+              <View key={index} style={styles.row}>
+                <Text style={styles.itemName}>{member.user}</Text>
+                <Text style={styles.itemPrice}>{member.partyRole}</Text>
+              </View>
+            ))}
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
      <SafeAreaView style={styles.container}>
@@ -182,6 +217,13 @@ const styles = StyleSheet.create({
     color: DEEP_OCEAN,
     textAlign: 'center',
     marginBottom: 12,
+  },
+  waitingText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#5A6B7D',
+    textAlign: 'center',
+    marginBottom: 20,
   },
 
   itemName: { fontSize: 15, color: DEEP_OCEAN, flex: 1 },
