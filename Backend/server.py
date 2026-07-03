@@ -170,7 +170,9 @@ def is_real_word(word: str) -> bool:
     w = word.lower()
     if w in ENGLISH_WORD_SET:
         return True
-    # only fuzzy-match short candidate lists, not the full 236k set
+    if len(w) < 4:
+        return False
+    # Only fuzzy match against words of similar length — massively smaller search space
     candidates = [x for x in ENGLISH_WORD_SET if abs(len(x) - len(w)) <= 1 and x[0] == w[0]]
     return bool(get_close_matches(w, candidates, n=1, cutoff=0.85))
 
@@ -198,15 +200,14 @@ def preprocess_image(img_bytes: bytes) -> np.ndarray:
 
 
     # 2× upscale — gives Tesseract more pixel detail to work with
-    img = cv2.resize(img, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_LINEAR) #INTER_CUBIC
+    img = cv2.resize(img, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC) 
 
 
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 
     # Bilateral filter: smooths noise while preserving character edges
-    gray = cv2.medianBlur(gray, 3)
-    # gray = cv2.bilateralFilter(gray, d=9, sigmaColor=75, sigmaSpace=75)
+    gray = cv2.bilateralFilter(gray, d=9, sigmaColor=75, sigmaSpace=75)
 
 
     # Adaptive threshold handles uneven lighting/shadows far better than global Otsu
@@ -397,11 +398,11 @@ async def upload_image(file: UploadFile = File(...)): # Repeated File Name
         party_id        = makeID()
 
 
-        # supabase.table("partyMaking").insert({
-        #     "partyID":   party_id,
-        #     "partyRole": "Leader",
-        #     "user":      "Leader",
-        # }).execute()
+        supabase.table("partyMaking").insert({
+            "partyID":   party_id,
+            "partyRole": "Leader",
+            "user":      "Leader",
+        }).execute()
 
 
         if items is None:
@@ -461,20 +462,6 @@ async def add_tip(tip: float, id: int):
     return {"success": True}
 
 
-# @app.post("/add-tip")  
-# async def update_tip(tip: int, id: int):
-#     try:
-#         response = (
-#             supabase.table("receipts")
-#             .update({"tip": tip})
-#             .eq("id", id)
-#             .execute()
-#         )
-#         return {"success": "Tip upload successfully"}
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail = f"{type(e).__name__}: {e}" )
-       
-
 
 @app.get("/receipt-info")
 async def upload_image(id: int):
@@ -490,25 +477,47 @@ async def upload_image(id: int):
         raise HTTPException(status_code=500, detail = f"{type(e).__name__}: {e}" )
     
 
+
+
 @app.post("/createParty")
 async def createParty(userName: str, id: str):
     partyID = makeID()
-    role = "Leader"
-    
 
-    
+    # Remove the placeholder row created during upload
+    old_party = supabase.table("receipts").select("partyID").eq("id", id).execute()
+    if old_party.data:
+        old_party_id = old_party.data[0]["partyID"]
+        supabase.table("partyMaking").delete().eq("partyID", old_party_id).execute()
 
     supabase.table("partyMaking").insert({
-    "partyID": partyID,
-    "partyRole": role,
-    "user": userName
-           
+        "partyID":   partyID,
+        "partyRole": "Leader",
+        "user":      userName,
     }).execute()
-
 
     supabase.table("receipts").update({"partyID": partyID}).eq("id", id).execute()
 
     return {"partyID": partyID}
+
+# @app.post("/createParty")
+# async def createParty(userName: str, id: str):
+#     partyID = makeID()
+#     role = "Leader"
+    
+
+    
+
+#     supabase.table("partyMaking").insert({
+#     "partyID": partyID,
+#     "partyRole": role,
+#     "user": userName
+           
+#     }).execute()
+
+
+#     supabase.table("receipts").update({"partyID": partyID}).eq("id", id).execute()
+
+#     return {"partyID": partyID}
 
 
 @app.post("/joinParty")
