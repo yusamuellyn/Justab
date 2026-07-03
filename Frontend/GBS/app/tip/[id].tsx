@@ -14,39 +14,79 @@ export default function Tip() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const [selectedValue, setSelectedValue] = useState('');
+  // Added
+  const [isDollar, setIsDollar]         = useState(false);
+  const [autoDetected, setAutoDetected] = useState(false);
+  const [detectedValue, setDetectedValue] = useState<string | null>(null);
+
+
 
   useFocusEffect(
     useCallback(() => {
       const loadTip = async () => {
-        const response = await fetch(`${getApiUrl()}/receipt-info?id=${id}`, {
-          method: 'GET',
-        });
-        const data = await response.json();
-        if (response.ok && data.info.tip != null) {
-          setSelectedValue(String(data.info.tip));
-        }
+          const response = await fetch(`${getApiUrl()}/receipt-info?id=${id}`, {
+            method: 'GET',
+          });
+          const data = await response.json();
+          if (response.ok) {
+            if (data.info.tip != null) {
+              setSelectedValue(String(data.info.tip));
+              setIsDollar(data.info.tip_is_dollar ?? false);
+              setAutoDetected(true);
+              setDetectedValue(String(data.info.tip));
+            } else if (data.info.tip_detected != null) {
+              setSelectedValue(String(data.info.tip_detected));
+              setIsDollar(true);
+              setAutoDetected(true);
+              setDetectedValue(String(data.info.tip_detected));
+            }
+          }
+        // const response = await fetch(`${getApiUrl()}/receipt-info?id=${id}`, {
+        //   method: 'GET',
+        // });
+        // const data = await response.json();
+        // if (response.ok && data.info.tip != null) {
+        //   setSelectedValue(String(data.info.tip));
+        // }
       };
       loadTip();
     }, [id])
   );
 
   const confirmTip = async () => {
-    const uploadTip = await fetch(
-      `${getApiUrl()}/add-tip?tip=${Number(selectedValue)}&id=${Number(id)}`,
-      { method: 'POST' }
-    );
+  const uploadTip = await fetch(
+    `${getApiUrl()}/add-tip?tip=${Number(selectedValue)}&id=${Number(id)}&is_dollar=${isDollar}`,
+    { method: 'POST' }
+  );
+  if (!uploadTip.ok) {
+    throw new Error(`POST tip failed ${uploadTip.status}`);
+  }
+  router.push(`../receipts/${id}` as any);
+ };
 
-    if (!uploadTip.ok) {
-      throw new Error(`POST tip failed ${uploadTip.status}`);
-    }
+  // const confirmTip = async () => {
+  //   const uploadTip = await fetch(
+  //     `${getApiUrl()}/add-tip?tip=${Number(selectedValue)}&id=${Number(id)}`,
+  //     { method: 'POST' }
+  //   );
 
-    router.push(`../receipts/${id}` as any);
-  };
+  //   if (!uploadTip.ok) {
+  //     throw new Error(`POST tip failed ${uploadTip.status}`);
+  //   }
+
+  //   router.push(`../receipts/${id}` as any);
+  // };
 
   const handleChange = (text: string) => {
     const cleaned = text.replace(/[^0-9.]/g, '');
     setSelectedValue(cleaned);
+    setAutoDetected(false); // user is editing — clear the detected label
   };
+
+  // const handleChange = (text: string) => {
+  //   const cleaned = text.replace(/[^0-9.]/g, '');
+  //   setSelectedValue(cleaned);
+  // };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -58,6 +98,78 @@ export default function Tip() {
 
       <View style={styles.content}>
         <View style={styles.card}>
+          <Text style={styles.title}>Enter Tip</Text>
+          <Text style={styles.subtitle}>
+            {isDollar
+              ? 'Flat amount split evenly among all members.'
+              : 'Percentage split proportionally by what each person ordered.'}
+          </Text>
+
+          {autoDetected && (
+            <Text style={{ color: '#5A6B7D', fontSize: 12, textAlign: 'center', marginBottom: 8 }}>
+              {isDollar
+                ? `$${detectedValue} tip detected on receipt — confirm or edit`
+                : `${detectedValue}% tip detected on receipt — confirm or edit`}
+            </Text>
+          )}
+
+          {/* % / $ toggle */}
+          <View style={{
+            flexDirection: 'row',
+            backgroundColor: COOL_GRAY_BG,
+            borderRadius: 10,
+            marginBottom: 20,
+            padding: 3,
+          }}>
+            <TouchableOpacity
+              onPress={() => setIsDollar(false)}
+              style={{
+                flex: 1,
+                paddingVertical: 8,
+                borderRadius: 8,
+                alignItems: 'center',
+                backgroundColor: !isDollar ? WHITE : 'transparent',
+              }}
+            >
+              <Text style={{ color: DEEP_OCEAN, fontWeight: !isDollar ? '700' : '400' }}>
+                Percent %
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setIsDollar(true)}
+              style={{
+                flex: 1,
+                paddingVertical: 8,
+                borderRadius: 8,
+                alignItems: 'center',
+                backgroundColor: isDollar ? WHITE : 'transparent',
+              }}
+            >
+              <Text style={{ color: DEEP_OCEAN, fontWeight: isDollar ? '700' : '400' }}>
+                Dollar $
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.inputRow}>
+            {isDollar && <Text style={styles.percentSign}>$</Text>}
+            <TextInput
+              style={styles.input}
+              keyboardType="decimal-pad"
+              value={selectedValue}
+              onChangeText={handleChange}
+              placeholder="0"
+              placeholderTextColor={COOL_GRAY}
+              maxLength={6}
+            />
+            {!isDollar && <Text style={styles.percentSign}>%</Text>}
+          </View>
+
+          <TouchableOpacity style={styles.confirmButton} onPress={confirmTip}>
+            <Text style={styles.confirmText}>Confirm Tip</Text>
+          </TouchableOpacity>
+        </View>
+        {/* <View style={styles.card}>
           <Text style={styles.title}>Enter Tip Percent</Text>
           <Text style={styles.subtitle}>Choose how much you want to tip on the subtotal. If tip is already included please enter 0. </Text>
 
@@ -77,7 +189,7 @@ export default function Tip() {
           <TouchableOpacity style={styles.confirmButton} onPress={confirmTip}>
             <Text style={styles.confirmText}>Confirm Tip</Text>
           </TouchableOpacity>
-        </View>
+        </View> */}
       </View>
     </SafeAreaView>
   );

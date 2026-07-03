@@ -1,3 +1,7 @@
+# Endpoints Are In Different Order After Deletion - Should Still Work
+# STILL NEED TO FIX tip_detected null AND %/$ DISPLAY AND CALCULATION ISSUES
+# Keep an eye on len word 3 changes
+
 import os
 from urllib import response
 import uuid
@@ -23,7 +27,6 @@ import ssl
 
 import uuid
 import json
-import cv2
 import numpy as np
 import nltk
 import pytesseract
@@ -124,8 +127,6 @@ from nltk.corpus import words as _english_words
 ENGLISH_WORD_SET = set(w.lower() for w in _english_words.words())
 
 
-ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}
-
 
 IGNORE_WORDS = [
     'sr', 'zrl', 'tumt', 'zr', 'cash', 'change', 'total', 'subtotal',
@@ -134,8 +135,8 @@ IGNORE_WORDS = [
     'rounded', 'desc', 'qty', 'price', 'disc', 'gratuity',
 ]
 
-
-SKIP_KEYWORDS = {'subtotal', 'sub total', 'total', 'tax', 'tip', 'tend', 'change', 'cash'}
+SKIP_KEYWORDS = {'subtotal', 'sub total', 'total', 'tax', 'tip', 'tend', 'change', 'cash', 'gratuity', 'svc', 'service'}
+# SKIP_KEYWORDS = {'subtotal', 'sub total', 'total', 'tax', 'tip', 'tend', 'change', 'cash'}
 
 
 # Legitimate short words that shouldn't be stripped from item name start
@@ -255,6 +256,17 @@ def clean_item_name(raw: str) -> str:
     return ' '.join(words)
 
 
+# Added - Tip Rework
+def line_has_skip_keyword(line_lower: str) -> tuple[bool, str | None]:
+    for kw in SKIP_KEYWORDS:
+        if kw in line_lower:
+            return True, kw
+    for word in line_lower.split():
+     if len(word) >= 3:
+        matches = get_close_matches(word, SKIP_KEYWORDS, n=1, cutoff=0.82)
+        if matches:          # ← must be inside the if block
+            return True, matches[0]
+    return False, None
 
 
 # ── Core OCR logic ────────────────────────────────────────────────────────────
@@ -307,14 +319,25 @@ def process_receipt(image_bytes: bytes):
 
 
         # Classify totals/tax/tip lines and skip them as items
-        if any(kw in line_lower for kw in SKIP_KEYWORDS):
-            if 'total' in line_lower and 'sub' not in line_lower and 'subtotal' not in line_lower:
+        is_skip, matched_kw = line_has_skip_keyword(line_lower)
+        if is_skip:
+            if matched_kw == 'total' and 'sub' not in line_lower and 'subtotal' not in line_lower:
                 total_price = price
-            elif 'tax' in line_lower:
+            elif matched_kw in ('tax', 'gst'):
                 tax_price = price
-            elif 'tip' in line_lower:
+            elif matched_kw in ('tip', 'gratuity', 'svc', 'service'):
                 tip_price = price
             continue
+
+
+        # if any(kw in line_lower for kw in SKIP_KEYWORDS):
+        #     if 'total' in line_lower and 'sub' not in line_lower and 'subtotal' not in line_lower:
+        #         total_price = price
+        #     elif 'tax' in line_lower:
+        #         tax_price = price
+        #     elif 'tip' in line_lower:
+        #         tip_price = price
+        #     continue
 
 
         # Everything left of the price position is the item label
@@ -386,27 +409,42 @@ async def upload_image(file: UploadFile = File(...)): # Repeated File Name
         # OCR runs before any DB writes so we don't burn IDs on a failed parse
         price_array, items, total_price, tax_price, tip_price = process_receipt(resp.content)
 
+        # Attempt to calculate tip percent from OCR values - ADDED
+        tip_detected = float(tip_price) if tip_price else None
+        tip_percent  = None
+        if tip_price and total_price and tax_price:
+            try:
+                subtotal = float(total_price) - float(tax_price) - float(tip_price)
+                if subtotal > 0:
+                    tip_percent = round((float(tip_price) / subtotal) * 100, 2)
+            except (ValueError, ZeroDivisionError):
+                pass
+
 
         party_join_code = makeCode()
         party_id        = makeID()
 
 
-        supabase.table("partyMaking").insert({
-            "partyID":   party_id,
-            "partyRole": "Leader",
-            "user":      "Leader",
-        }).execute()
+        # supabase.table("partyMaking").insert({
+        #     "partyID":   party_id,
+        #     "partyRole": "Leader",
+        #     "user":      "Leader",
+        # }).execute()
+
+        
 
 
         if items is None:
             response = supabase.table("receipts").insert({
                 "receipt_url":   public_url,
                 "items":         {},
-                "tax":           None,
+                "tax":   float(tax_price) if tax_price else None,
+                "total": float(total_price) if total_price else None,
                 "partyJoinCode": party_join_code,
-                "total":         None,
                 "partyID":       party_id,
-                "tip":           None, # Change Back To Tip Price When Included/Entered Tip Changes Made - Already On Claude
+                "tip":           tip_percent,    # calculated % from OCR if possible, else None
+                "tip_detected":  tip_detected,   # raw $ OCR found, else None
+                "tip_is_dollar": False,          # always starts as percent mode
             }).execute()
             return {"warning": True, "id": response.data[0]["id"]}
 
@@ -421,11 +459,13 @@ async def upload_image(file: UploadFile = File(...)): # Repeated File Name
         response = supabase.table("receipts").insert({
             "receipt_url":   public_url,
             "items":         item_list,
-            "tax":           tax_price,
             "partyJoinCode": party_join_code,
-            "total":         total_price,
+            "tax":   float(tax_price) if tax_price else None,
+            "total": float(total_price) if total_price else None,
             "partyID":       party_id,
-            "tip":           None,
+            "tip":           tip_percent,    # calculated % from OCR if possible, else None
+            "tip_detected":  tip_detected,   # raw $ OCR found, else None
+            "tip_is_dollar": False,          # always starts as percent mode
         }).execute()
 
 
@@ -439,34 +479,28 @@ async def upload_image(file: UploadFile = File(...)): # Repeated File Name
 
 
 
-
-
-
-
 @app.post("/add-tip")
-# Revised Mid Tip Changes Between Entered/Included
-# Column in Supabase Also Adjusted In Type
-async def add_tip(tip: float, id: int):
+async def add_tip(tip: float, id: int, is_dollar: bool = False):
     response = supabase.table("receipts").select("id").eq("id", id).execute()
     if not response.data:
         raise HTTPException(status_code=404, detail="Receipt not found")
-
-    supabase.table("receipts").update({"tip": float(tip)}).eq("id", id).execute()
+    supabase.table("receipts").update({
+        "tip":           float(tip),
+        "tip_is_dollar": is_dollar,
+    }).eq("id", id).execute()
     return {"success": True}
 
+# Replaced
+# @app.post("/add-tip")
+# async def add_tip(tip: float, id: int):
+#     response = supabase.table("receipts").select("id").eq("id", id).execute()
+#     if not response.data:
+#         raise HTTPException(status_code=404, detail="Receipt not found")
 
-# @app.post("/add-tip")  
-# async def update_tip(tip: int, id: int):
-#     try:
-#         response = (
-#             supabase.table("receipts")
-#             .update({"tip": tip})
-#             .eq("id", id)
-#             .execute()
-#         )
-#         return {"success": "Tip upload successfully"}
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail = f"{type(e).__name__}: {e}" )
+#     supabase.table("receipts").update({"tip": float(tip)}).eq("id", id).execute()
+#     return {"success": True}
+
+
        
 
 
@@ -475,7 +509,8 @@ async def upload_image(id: int):
     try:
         response = (
         supabase.table("receipts")
-        .select("items, tax, tip, total, partyJoinCode, partyID")
+        .select("items, tax, tip, tip_detected, tip_is_dollar, total, partyJoinCode, partyID")
+        # .select("items, tax, tip, total, partyJoinCode, partyID")
         .eq("id", id)
         .execute()
         )
@@ -526,6 +561,7 @@ async def joinParty(code:str, userName: str):
     
     return {"partyID": partyID}
 
+
 @app.get("/displayMembers")
 async def displayMembers(partyID: str):
     response = supabase.table("partyMaking").select("*").eq("partyID", partyID).execute()
@@ -556,6 +592,9 @@ async def displayItems(partyID: str):
 
     return {"items": items}
 
+
+
+
 @app.post("/claimItem")
 async def claimItem(partyID: str, itemIndex: str, userName: str):
     response = supabase.table("receipts").select("splitDisplay").eq("partyID", partyID).execute()
@@ -581,11 +620,14 @@ async def claimItem(partyID: str, itemIndex: str, userName: str):
 
 @app.get("/displayTotals")
 async def displayTotals(partyID: str):
-    response = supabase.table("receipts").select("items, splitDisplay, tax, tip").eq("partyID", partyID).execute()
+    response = supabase.table("receipts").select(
+        "items, splitDisplay, tax, tip, tip_detected, tip_is_dollar"
+    ).eq("partyID", partyID).execute()
+
     if not response.data:
         raise HTTPException(status_code=404, detail="Receipt not found")
 
-    receipt = response.data[0]
+    receipt   = response.data[0]
     raw_items = receipt["items"] or {}
 
     try:
@@ -593,50 +635,148 @@ async def displayTotals(partyID: str):
     except (json.JSONDecodeError, TypeError):
         splitDisplay = {}
 
-    totals = {}
+    totals: dict[str, int] = {}
     unclaimed_cents = 0
 
     for index, (name, price) in enumerate(raw_items.items()):
         price_cents = round(float(price) * 100)
-        claimants = splitDisplay.get(str(index), [])
-
+        claimants   = splitDisplay.get(str(index), [])
         if not claimants:
             unclaimed_cents += price_cents
             continue
-
-        base = price_cents // len(claimants)
+        base      = price_cents // len(claimants)
         remainder = price_cents % len(claimants)
         for i, person in enumerate(claimants):
             share = base + (1 if i < remainder else 0)
             totals[person] = totals.get(person, 0) + share
 
     claimed_subtotal_cents = sum(totals.values())
+    tax_cents     = round(float(receipt.get("tax") or 0) * 100)
+    tip_value     = receipt.get("tip")
+    tip_detected  = receipt.get("tip_detected")
+    tip_is_dollar = receipt.get("tip_is_dollar", False)
+    tip_cents     = 0
 
-    tax_cents = round(float(receipt.get("tax") or 0) * 100)
-    tip_percent = receipt.get("tip") or 0
-    tip_cents = round(claimed_subtotal_cents * (tip_percent / 100))
+    # Dollar tip — OCR detected, user hasn't overridden yet
+    if tip_detected is not None and tip_value is None:
+        members_resp   = supabase.table("partyMaking").select("user").eq("partyID", partyID).execute()
+        unique_members = list({m["user"]: m for m in members_resp.data}.values()) if members_resp.data else []
+        member_count   = len(unique_members) if unique_members else 1
+        tip_cents      = round(float(tip_detected) * 100)
 
-    extra_cents = tax_cents + tip_cents
+        if member_count == 1:
+            name = unique_members[0]["user"]
+            totals[name] = totals.get(name, 0) + tip_cents
+        else:
+            tip_per = tip_cents // member_count
+            tip_rem = tip_cents % member_count
+            for i, member in enumerate(unique_members):
+                name = member["user"]
+                totals[name] = totals.get(name, 0) + tip_per + (1 if i < tip_rem else 0)
 
+    # Dollar tip — user explicitly entered a flat amount
+    elif tip_value is not None and tip_is_dollar:
+        members_resp   = supabase.table("partyMaking").select("user").eq("partyID", partyID).execute()
+        unique_members = list({m["user"]: m for m in members_resp.data}.values()) if members_resp.data else []
+        member_count   = len(unique_members) if unique_members else 1
+        tip_cents      = round(float(tip_value) * 100)
+
+        if member_count == 1:
+            name = unique_members[0]["user"]
+            totals[name] = totals.get(name, 0) + tip_cents
+        else:
+            tip_per = tip_cents // member_count
+            tip_rem = tip_cents % member_count
+            for i, member in enumerate(unique_members):
+                name = member["user"]
+                totals[name] = totals.get(name, 0) + tip_per + (1 if i < tip_rem else 0)
+
+    # Percentage tip — proportional to each person's claimed subtotal
+    elif tip_value is not None and not tip_is_dollar:
+        tip_cents = round(claimed_subtotal_cents * (float(tip_value) / 100))
+
+    # Tax + percent tip split proportionally to claimed share
+    extra_cents = tax_cents + (tip_cents if (tip_value is not None and not tip_is_dollar) else 0)
     if claimed_subtotal_cents > 0 and extra_cents > 0:
-        people = list(totals.keys())
+        people  = list(totals.keys())
         running = 0
         for i, person in enumerate(people):
             if i == len(people) - 1:
                 share = extra_cents - running
             else:
-                share = round(extra_cents * (totals[person] / claimed_subtotal_cents))
+                share    = round(extra_cents * (totals[person] / claimed_subtotal_cents))
                 running += share
             totals[person] += share
 
     result = [{"user": person, "owes": cents / 100} for person, cents in totals.items()]
 
     return {
-        "totals": result,
+        "totals":    result,
         "unclaimed": unclaimed_cents / 100,
-        "tax": tax_cents / 100,
-        "tip": tip_cents / 100,
+        "tax":       tax_cents / 100,
+        "tip":       tip_cents / 100,
     }
+
+# Old
+# @app.get("/displayTotals")
+# async def displayTotals(partyID: str):
+#     response = supabase.table("receipts").select("items, splitDisplay, tax, tip").eq("partyID", partyID).execute()
+#     if not response.data:
+#         raise HTTPException(status_code=404, detail="Receipt not found")
+
+#     receipt = response.data[0]
+#     raw_items = receipt["items"] or {}
+
+#     try:
+#         splitDisplay = json.loads(receipt["splitDisplay"]) if receipt["splitDisplay"] else {}
+#     except (json.JSONDecodeError, TypeError):
+#         splitDisplay = {}
+
+#     totals = {}
+#     unclaimed_cents = 0
+
+#     for index, (name, price) in enumerate(raw_items.items()):
+#         price_cents = round(float(price) * 100)
+#         claimants = splitDisplay.get(str(index), [])
+
+#         if not claimants:
+#             unclaimed_cents += price_cents
+#             continue
+
+#         base = price_cents // len(claimants)
+#         remainder = price_cents % len(claimants)
+#         for i, person in enumerate(claimants):
+#             share = base + (1 if i < remainder else 0)
+#             totals[person] = totals.get(person, 0) + share
+
+#     claimed_subtotal_cents = sum(totals.values())
+
+#     tax_cents = round(float(receipt.get("tax") or 0) * 100)
+#     tip_percent = receipt.get("tip") or 0
+#     tip_cents = round(claimed_subtotal_cents * (tip_percent / 100))
+
+#     extra_cents = tax_cents + tip_cents
+
+#     if claimed_subtotal_cents > 0 and extra_cents > 0:
+#         people = list(totals.keys())
+#         running = 0
+#         for i, person in enumerate(people):
+#             if i == len(people) - 1:
+#                 share = extra_cents - running
+#             else:
+#                 share = round(extra_cents * (totals[person] / claimed_subtotal_cents))
+#                 running += share
+#             totals[person] += share
+
+#     result = [{"user": person, "owes": cents / 100} for person, cents in totals.items()]
+
+#     return {
+#         "totals": result,
+#         "unclaimed": unclaimed_cents / 100,
+#         "tax": tax_cents / 100,
+#         "tip": tip_cents / 100,
+#     }
+
 
 @app.post("/updateLeaderName")
 async def updateLeaderName(partyID: str, userName: str):

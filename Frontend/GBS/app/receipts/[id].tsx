@@ -32,6 +32,8 @@ export default function Receipt() {
 
     const [members, setMembers] = useState<any[]>([]);
 
+    const [tipIsDollar, setTipIsDollar] = useState(false);
+
     const goToSplit = () => { 
       if (!items || !userName) return;
         router.push(`/split/${partyID}?userName=${userName}` as any);
@@ -68,6 +70,7 @@ export default function Receipt() {
         setPartyID(dataInfo.info.partyID);
         if (dataInfo.info.tip != null) {
             setTips(dataInfo.info.tip);
+            setTipIsDollar(dataInfo.info.tip_is_dollar ?? false);
         }
       };
       getInfo();
@@ -165,7 +168,9 @@ export default function Receipt() {
                 <View style={styles.card}>
                     <View style={styles.row}>
                         <Text style={styles.itemName}>Tip</Text>
-                        <Text style={styles.itemPrice}>{Number(tip)}%</Text>
+                        <Text style={styles.itemPrice}>
+                            {tipIsDollar ? `$${Number(tip).toFixed(2)}` : `${Number(tip)}%`}
+                        </Text>
                     </View>
                 </View>
             )}
