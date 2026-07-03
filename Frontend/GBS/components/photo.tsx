@@ -6,7 +6,7 @@ import {
   useCameraPermissions,
 } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -35,6 +35,12 @@ export default function Photo() {
   const [loadingMessage, setLoadingMessage] = useState('');
   const [error, setError] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    // Wake the backend early so the first upload lands on a warm server
+    // (avoids free-tier cold-start timeout). Fire-and-forget.
+    fetch(`${getApiUrl()}/`).catch(() => {});
+  }, []);
 
   if (!permission) {
     return <View style={styles.fill} />;

@@ -62,6 +62,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+async def health():
+    return {"status": "ok"}
+
 ALLOWED_TYPES = ["image/png", "image/jpeg", "image/heic", "image/heif", "application/octet-stream"]
 
 #Rework Later For Non-repition
