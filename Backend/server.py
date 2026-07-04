@@ -4,36 +4,33 @@ import uuid
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-
 import re
 import cv2
 import pytesseract
 from pytesseract import Output
 from difflib import get_close_matches
 import nltk
-
 from supabase import create_client, Client 
 from dotenv import load_dotenv
-
 import json 
-import requests
 import numpy as np
 import ssl 
-
-
-import uuid
-import json
-import cv2
-import numpy as np
-import nltk
-import pytesseract
 import requests
-from difflib import get_close_matches
-from fastapi import UploadFile, File, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, Header, Depends, Request, UploadFile
+import secrets
+
+from slowapi import Limiter, _rate_limit_exceeded_handler # SlowAPI Needs To Be Installed, Added To Backends requirements.txt
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("gbs")
+
 
 load_dotenv()
 
-import random
 
 pytesseract.pytesseract.tesseract_cmd = os.environ.get(
   'TESSERACT_CMD',
@@ -49,18 +46,34 @@ pytesseract.pytesseract.tesseract_cmd = os.environ.get(
 
 
 
-url = os.environ.get("EXPO_PUBLIC_SUPABASE_URL") # Change To SUPABASE_URL / KEY
-key = os.environ.get("EXPO_PUBLIC_SUPABASE_KEY")
+url = os.environ.get("SUPABASE_URL") # Changed To SUPABASE_URL / KEY
+key = os.environ.get("SUPABASE_KEY")
+API_KEY = os.environ.get("SUPABASE_KEY") # Security Addition
 supabase: Client = create_client(url, key)
 app = FastAPI()
 
-# Client and server are on different origins
+
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+_origins = os.environ.get("ALLOWED_ORIGINS", "")
+ALLOWED_ORIGINS = [o.strip() for o in _origins.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
+# Client and server are on different origins
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["*"],
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
 
 @app.get("/")
 async def health():
@@ -69,52 +82,14 @@ async def health():
 ALLOWED_TYPES = ["image/png", "image/jpeg", "image/heic", "image/heif", "application/octet-stream"]
 
 #Rework Later For Non-repition
-def makeCode():
-     letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']
-     ucLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
-     numbers = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
-    
-     finalString = ""
+# Currently Security Reworked
+ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-     for i in range(0,4):
-        random_Index_L = random.randrange(len(letters))
-        random_Index_N = random.randrange(len(numbers))
-        random_Form = random.randrange(0,3)
+def makeCode(length: int = 6) -> str:
+    return ''.join(secrets.choice(ALPHABET) for _ in range(length))
 
-        if (random_Form) == 0: 
-            finalString = finalString + f"{letters[random_Index_L]}"
-        
-        if (random_Form) == 1: 
-            finalString = finalString + f"{ucLetters[random_Index_L]}"
-
-        if (random_Form) == 2: 
-            finalString = finalString + f"{numbers[random_Index_N]}"
-
-     return finalString  
-
-def makeID():
- letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']
- ucLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
- numbers = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
-
- finalID = ""
- for i in range(0,8):
-        random_Index_L = random.randrange(len(letters))
-        random_Index_N = random.randrange(len(numbers))
-        random_Form = random.randrange(0,3)
-
-        if (random_Form) == 0: 
-            finalID = finalID+ f"{letters[random_Index_L]}"
-        
-        if (random_Form) == 1: 
-            finalID = finalID + f"{ucLetters[random_Index_L]}"
-
-        if (random_Form) == 2: 
-            finalID = finalID+ f"{numbers[random_Index_N]}"
-
- return finalID   
-
-
+def makeID(length: int = 16) -> str:
+    return ''.join(secrets.choice(ALPHABET) for _ in range(length))
 
 
 
@@ -126,10 +101,6 @@ def makeID():
 nltk.download('words', quiet=True)
 from nltk.corpus import words as _english_words
 ENGLISH_WORD_SET = set(w.lower() for w in _english_words.words())
-
-
-ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}
-
 
 IGNORE_WORDS = [
     'sr', 'zrl', 'tumt', 'zr', 'cash', 'change', 'total', 'subtotal',
@@ -164,7 +135,12 @@ PRICE_RE = re.compile(r'(?<!\d)(\d{1,4}\.\d{2})(?!\d)')
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
-
+# Makes Endpoints Require API Keys
+def require_api_key(x_api_key: str = Header(None)):
+    if not API_KEY:
+        raise HTTPException(status_code=500, detail="Server misconfigured")
+    if not x_api_key or not secrets.compare_digest(x_api_key, API_KEY):
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
 def is_real_word(word: str) -> bool:
     w = word.lower()
@@ -191,7 +167,10 @@ def normalize_text(text: str) -> str:
         text = pattern.sub(repl, text)
     return text
 
-
+# Receipt-Info Solution
+def safe_error(e: Exception, context: str) -> HTTPException:
+    logger.error(f"{context} failed: {type(e).__name__}: {e}")
+    return HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 
 def preprocess_image(img_bytes: bytes) -> np.ndarray:
@@ -369,17 +348,23 @@ def process_receipt(image_bytes: bytes):
 # ── Endpoint ──────────────────────────────────────────────────────────────────
 
 
-@app.post("/upload")
-async def upload_image(file: UploadFile = File(...)): # Repeated File Name
+@app.post("/upload", dependencies=[Depends(require_api_key)]) # API Key and Rate Limiter Added
+@limiter.limit("10/minute")
+async def upload_image(request:Request, file: UploadFile = File(...)): # Repeated File Name
     if file.content_type not in ALLOWED_TYPES:
-        return {"error": "Invalid File Type"}
+        raise HTTPException(status_code=400, detail="Invalid file type")
 
 
     try:
-        contents = await file.read()
         ext       = os.path.splitext(file.filename or "")[1] or ".png"
         file_path = f"{uuid.uuid4().hex}{ext}"
 
+        MAX_UPLOAD_BYTES = 8 * 1024 * 1024  # module-level constant
+
+        contents = await file.read()
+        if len(contents) > MAX_UPLOAD_BYTES:
+            raise HTTPException(status_code=413, detail="File too large")
+        
 
         supabase.storage.from_("receipts").upload(
             file_path,
@@ -387,8 +372,9 @@ async def upload_image(file: UploadFile = File(...)): # Repeated File Name
             file_options={"content-type": file.content_type},
         )
 
-
-        public_url = supabase.storage.from_("receipts").get_public_url(file_path)
+        signed = supabase.storage.from_("receipts").create_signed_url(file_path, 60 * 60 * 24 * 7)
+        image_url = signed.get("signedURL") or signed.get("signed_url")
+        # public_url = supabase.storage.from_("receipts").get_public_url(file_path)
 
         # OCR runs before any DB writes so we don't burn IDs on a failed parse
         price_array, items, total_price, tax_price, tip_price = process_receipt(contents)
@@ -407,7 +393,7 @@ async def upload_image(file: UploadFile = File(...)): # Repeated File Name
 
         if items is None:
             response = supabase.table("receipts").insert({
-                "receipt_url":   public_url,
+                "receipt_url":   image_url,
                 "items":         {},
                 "tax":           None,
                 "partyJoinCode": party_join_code,
@@ -415,18 +401,13 @@ async def upload_image(file: UploadFile = File(...)): # Repeated File Name
                 "partyID":       party_id,
                 "tip":           None, # Change Back To Tip Price When Included/Entered Tip Changes Made - Already On Claude
             }).execute()
-            return {"warning": True, "id": response.data[0]["id"]}
+            return {"warning": True, "partyID": party_id}
 
 
         item_list = {item: price for item, price in zip(items, price_array)}
 
-
-        with open("receipt.json", "w") as f:
-            json.dump(item_list, f)
-
-
         response = supabase.table("receipts").insert({
-            "receipt_url":   public_url,
+            "receipt_url":   image_url,
             "items":         item_list,
             "tax":           tax_price,
             "partyJoinCode": party_join_code,
@@ -436,12 +417,12 @@ async def upload_image(file: UploadFile = File(...)): # Repeated File Name
         }).execute()
 
 
-        return {"id": response.data[0]["id"]}
+        return {"partyID": party_id}
 
-
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"ERROR: {type(e).__name__}: {e}")
-        raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {e}")
+        raise safe_error(e, "upload_image")
 
 
 
@@ -450,54 +431,75 @@ async def upload_image(file: UploadFile = File(...)): # Repeated File Name
 
 
 
-@app.post("/add-tip")
+@app.post("/add-tip", dependencies=[Depends(require_api_key)])
 # Revised Mid Tip Changes Between Entered/Included
 # Column in Supabase Also Adjusted In Type
-async def add_tip(tip: float, id: int):
-    response = supabase.table("receipts").select("id").eq("id", id).execute()
+
+async def add_tip(tip: float, partyID: str):
+    response = supabase.table("receipts").select("id").eq("partyID", partyID).execute()
     if not response.data:
         raise HTTPException(status_code=404, detail="Receipt not found")
-
-    supabase.table("receipts").update({"tip": float(tip)}).eq("id", id).execute()
+    supabase.table("receipts").update({"tip": float(tip)}).eq("partyID", partyID).execute()
     return {"success": True}
 
+# async def add_tip(tip: float, id: int):
+#     response = supabase.table("receipts").select("id").eq("id", id).execute()
+#     if not response.data:
+#         raise HTTPException(status_code=404, detail="Receipt not found")
+
+#     supabase.table("receipts").update({"tip": float(tip)}).eq("id", id).execute()
+#     return {"success": True}
 
 
-@app.get("/receipt-info")
-async def upload_image(id: int):
+
+@app.get("/receipt-info", dependencies=[Depends(require_api_key)])
+async def receipt_info(partyID: str):
     try:
         response = (
-        supabase.table("receipts")
-        .select("items, tax, tip, total, partyJoinCode, partyID")
-        .eq("id", id)
-        .execute()
+            supabase.table("receipts")
+            .select("items, tax, tip, total, partyJoinCode, partyID")
+            .eq("partyID", partyID)
+            .execute()
         )
+        if not response.data:
+                raise HTTPException(status_code=404, detail="Receipt not found")
         return {"info": response.data[0]}
-    except Exception as e: 
-        raise HTTPException(status_code=500, detail = f"{type(e).__name__}: {e}" )
-    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise safe_error(e, "receipt_info")
 
-
-
-@app.post("/createParty")
-async def createParty(userName: str, id: str):
-    partyID = makeID()
-
-    # Remove the placeholder row created during upload
-    old_party = supabase.table("receipts").select("partyID").eq("id", id).execute()
-    if old_party.data:
-        old_party_id = old_party.data[0]["partyID"]
-        supabase.table("partyMaking").delete().eq("partyID", old_party_id).execute()
-
+@app.post("/createParty", dependencies=[Depends(require_api_key)])
+async def createParty(userName: str, partyID: str):
+    newPartyID = makeID()
+    supabase.table("partyMaking").delete().eq("partyID", partyID).execute()
     supabase.table("partyMaking").insert({
-        "partyID":   partyID,
+        "partyID": newPartyID,
         "partyRole": "Leader",
-        "user":      userName,
+        "user": userName,
     }).execute()
+    supabase.table("receipts").update({"partyID": newPartyID}).eq("partyID", partyID).execute()
+    return {"partyID": newPartyID}
 
-    supabase.table("receipts").update({"partyID": partyID}).eq("id", id).execute()
+# @app.post("/createParty", dependencies=[Depends(require_api_key)])
+# async def createParty(userName: str, id: str):
+#     partyID = makeID()
 
-    return {"partyID": partyID}
+#     # Remove the placeholder row created during upload
+#     old_party = supabase.table("receipts").select("partyID").eq("id", id).execute()
+#     if old_party.data:
+#         old_party_id = old_party.data[0]["partyID"]
+#         supabase.table("partyMaking").delete().eq("partyID", old_party_id).execute()
+
+#     supabase.table("partyMaking").insert({
+#         "partyID":   partyID,
+#         "partyRole": "Leader",
+#         "user":      userName,
+#     }).execute()
+
+#     supabase.table("receipts").update({"partyID": partyID}).eq("id", id).execute()
+
+#     return {"partyID": partyID}
 
 # @app.post("/createParty")
 # async def createParty(userName: str, id: str):
@@ -520,8 +522,9 @@ async def createParty(userName: str, id: str):
 #     return {"partyID": partyID}
 
 
-@app.post("/joinParty")
-async def joinParty(code:str, userName: str):
+@app.post("/joinParty", dependencies=[Depends(require_api_key)])
+@limiter.limit("10/minute") # API Key and Rate Limiter Added
+async def joinParty(request: Request, code:str, userName: str):
     
     role = "Member"
     response = supabase.table("receipts").select("partyJoinCode, partyID").eq("partyJoinCode", code).execute()
@@ -541,13 +544,13 @@ async def joinParty(code:str, userName: str):
     
     return {"partyID": partyID}
 
-@app.get("/displayMembers")
+@app.get("/displayMembers", dependencies=[Depends(require_api_key)])
 async def displayMembers(partyID: str):
     response = supabase.table("partyMaking").select("*").eq("partyID", partyID).execute()
     
     return {"members": response.data}
 
-@app.get("/displayItems")
+@app.get("/displayItems", dependencies=[Depends(require_api_key)])
 async def displayItems(partyID: str):
     response = supabase.table("receipts").select("items, splitDisplay").eq("partyID", partyID).execute()
     if not response.data:
@@ -571,7 +574,7 @@ async def displayItems(partyID: str):
 
     return {"items": items}
 
-@app.post("/claimItem")
+@app.post("/claimItem", dependencies=[Depends(require_api_key)])
 async def claimItem(partyID: str, itemIndex: str, userName: str):
     response = supabase.table("receipts").select("splitDisplay").eq("partyID", partyID).execute()
     if not response.data:
@@ -594,7 +597,7 @@ async def claimItem(partyID: str, itemIndex: str, userName: str):
 
     return {"claims": claimants}
 
-@app.get("/displayTotals")
+@app.get("/displayTotals", dependencies=[Depends(require_api_key)])
 async def displayTotals(partyID: str):
     response = supabase.table("receipts").select("items, splitDisplay, tax, tip").eq("partyID", partyID).execute()
     if not response.data:
@@ -653,41 +656,41 @@ async def displayTotals(partyID: str):
         "tip": tip_cents / 100,
     }
 
-@app.post("/updateLeaderName")
+@app.post("/updateLeaderName", dependencies=[Depends(require_api_key)])
 async def updateLeaderName(partyID: str, userName: str):
     supabase.table("partyMaking").update({"user": userName}).eq("partyID", partyID).eq("partyRole", "Leader").execute()
     return {"success": True}
 
-@app.get("/checkStatus")
+@app.get("/checkStatus", dependencies=[Depends(require_api_key)])
 async def checkStatus(partyID: str):
     response = supabase.table("receipts").select("status").eq("partyID", partyID).execute()
     if not response.data:
         raise HTTPException(status_code=404, detail="Party not found")
     return {"status": response.data[0]["status"]}
 
-@app.post("/setStatus")
+@app.post("/setStatus", dependencies=[Depends(require_api_key)])
 async def setStatus(partyID: str, status: str):
     response = supabase.table("receipts").update({"status": status}).eq("partyID", partyID).execute()
     if not response.data:
         raise HTTPException(status_code=404, detail="Party not found")
     return {"status": status}
 
-@app.post("/manualAdd") # Post and Get Diff?
-async def addItem(id: int, itemName: str, itemPrice: str):
-    response = supabase.table("receipts").select("items").eq("id", id).execute()
+@app.post("/manualAdd", dependencies=[Depends(require_api_key)]) # Post and Get Diff?
+async def addItem(partyID: str, itemName: str, itemPrice: str):
+    response = supabase.table("receipts").select("items").eq("partyID", partyID).execute()
     if not response.data:
         raise HTTPException(status_code=404, detail="Receipt not found")
     
     current_items = response.data[0]["items"] or {}
     current_items[itemName] = itemPrice
     
-    supabase.table("receipts").update({"items": current_items}).eq("id", id).execute()
+    supabase.table("receipts").update({"items": current_items}).eq("partyID", partyID).execute()
     
     return {"items": current_items}
 
-@app.post("/removeItem")
-async def removeItem(id: int, itemName: str):
-    response = supabase.table("receipts").select("items").eq("id", id).execute()
+@app.post("/removeItem", dependencies=[Depends(require_api_key)])
+async def removeItem(partyID: str, itemName: str):
+    response = supabase.table("receipts").select("items").eq("partyID", partyID).execute()
     if not response.data:
         raise HTTPException(status_code=404, detail="Receipt not found")
     
@@ -695,6 +698,6 @@ async def removeItem(id: int, itemName: str):
     if itemName in current_items:
         del current_items[itemName]
     
-    supabase.table("receipts").update({"items": current_items}).eq("id", id).execute()
+    supabase.table("receipts").update({"items": current_items}).eq("partyID", partyID).execute()
     
     return {"items": current_items}
