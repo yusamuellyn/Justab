@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getApiUrl } from '@/utils/api';
+import { getApiUrl, apiHeaders } from '@/utils/api';
 
 const DEEP_OCEAN = '#1E3A5F';
 const COOL_GRAY = '#C5CDD6';
@@ -29,7 +29,7 @@ export default function Split() {
 
   const getItems = async () => {
     if (!id) return;
-    const response = await fetch(`${getApiUrl()}/displayItems?partyID=${id}`);
+    const response = await fetch(`${getApiUrl()}/displayItems?partyID=${id}`, { headers: apiHeaders() });
     const data = await response.json();
     setItems(data.items || []);
   };
@@ -43,7 +43,7 @@ export default function Split() {
   useEffect(() => {
     if (isLeader || !id) return;
     const interval = setInterval(async () => {
-      const response = await fetch(`${getApiUrl()}/checkStatus?partyID=${id}`);
+      const response = await fetch(`${getApiUrl()}/checkStatus?partyID=${id}`, { headers: apiHeaders() });
       const data = await response.json();
       if (data.status === 'totals') {
         clearInterval(interval);
@@ -56,13 +56,13 @@ export default function Split() {
   const toggleItem = async (itemIndex: number) => {
     await fetch(
       `${getApiUrl()}/claimItem?itemIndex=${itemIndex}&userName=${userName}&partyID=${id}`,
-      { method: 'POST' }
+      { method: 'POST', headers: apiHeaders() }
     );
     getItems();
   };
 
   const goToTotals = async () => {
-    await fetch(`${getApiUrl()}/setStatus?partyID=${id}&status=totals`, { method: 'POST' });
+    await fetch(`${getApiUrl()}/setStatus?partyID=${id}&status=totals`, { method: 'POST', headers: apiHeaders() });
     router.push(`../totals/${id}?userName=${userName}` as any);
   };
 

@@ -8,7 +8,7 @@ import {
     View,
 } from 'react-native';
 import {useEffect, useState} from "react";
-import { getApiUrl } from "@/utils/api";
+import { getApiUrl, apiHeaders } from "@/utils/api";
 
 const DEEP_OCEAN = '#1E3A5F';
 const COOL_GRAY = '#C5CDD6';
@@ -31,7 +31,7 @@ export default function Party() {
 
   const getMembers = async () => {
     if (!partyID) return; 
-    const response = await fetch(`${getApiUrl()}/displayMembers?partyID=${partyID}`);//
+    const response = await fetch(`${getApiUrl()}/displayMembers?partyID=${partyID}`, { headers: apiHeaders() });//
     const data = await response.json();
     setMembers(data.members || []); // 
   };
@@ -51,6 +51,7 @@ export default function Party() {
   const joinParty = async () => {
     const response = await fetch(`${getApiUrl()}/joinParty?code=${codeInput}&userName=${userName}`, {
     method: 'POST',
+    headers: apiHeaders(),
     });
 
     const data = await response.json()// 
@@ -66,7 +67,7 @@ export default function Party() {
 
   const startPolling = (id: string, user: string) => {
     const interval = setInterval(async () => {
-      const response = await fetch(`${getApiUrl()}/checkStatus?partyID=${id}`);
+      const response = await fetch(`${getApiUrl()}/checkStatus?partyID=${id}`, { headers: apiHeaders() });
       const data = await response.json();
       if (data.status === 'splitting') {
         clearInterval(interval);

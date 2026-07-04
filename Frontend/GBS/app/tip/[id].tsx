@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { getApiUrl } from '@/utils/api';
+import { getApiUrl, apiHeaders } from '@/utils/api';
 import { useCallback, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,8 +18,9 @@ export default function Tip() {
   useFocusEffect(
     useCallback(() => {
       const loadTip = async () => {
-        const response = await fetch(`${getApiUrl()}/receipt-info?id=${id}`, {
+        const response = await fetch(`${getApiUrl()}/receipt-info?partyID=${id}`, {
           method: 'GET',
+          headers: apiHeaders(),
         });
         const data = await response.json();
         if (response.ok && data.info.tip != null) {
@@ -32,8 +33,8 @@ export default function Tip() {
 
   const confirmTip = async () => {
     const uploadTip = await fetch(
-      `${getApiUrl()}/add-tip?tip=${Number(selectedValue)}&id=${Number(id)}`,
-      { method: 'POST' }
+      `${getApiUrl()}/add-tip?tip=${Number(selectedValue)}&partyID=${id}`,
+      { method: 'POST', headers: apiHeaders() }
     );
 
     if (!uploadTip.ok) {

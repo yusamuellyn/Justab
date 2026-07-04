@@ -19,7 +19,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { getApiUrl } from '../utils/api';
+import { getApiUrl, apiHeaders } from '../utils/api';
 
 const DEEP_OCEAN = '#1E3A5F';
 const COOL_GRAY = '#C5CDD6';
@@ -78,6 +78,7 @@ export default function Photo() {
 
       const uploadPhoto = await fetch(`${getApiUrl()}/upload`, {
         method: 'POST',
+        headers: apiHeaders(),
         body: formData,
       });
 
@@ -93,13 +94,13 @@ export default function Photo() {
           "We couldn't detect any items on the receipt. You can still manually the add items.",
           [
             { text: 'Try Again' },
-            { text: 'Continue', onPress: () => router.push(`/tip/${data.id}` as any) },
+            { text: 'Continue', onPress: () => router.push(`/tip/${data.partyID}` as any) },
           ]
         );
         return;
       }
   
-      router.push(`/tip/${data.id}` as any);
+      router.push(`/tip/${data.partyID}` as any);
     } catch (error) {
       
       setError(true);
@@ -136,6 +137,7 @@ export default function Photo() {
   
       const uploadPhoto = await fetch(`${getApiUrl()}/upload`, {
         method: 'POST',
+        headers: apiHeaders(),
         body: formData,
       });
   
@@ -145,11 +147,11 @@ export default function Photo() {
       if (!uploadPhoto.ok) {
         throw new Error(`Upload Failed ${uploadPhoto.status}`);
       }
-      if (!data.id) {
+      if (!data.partyID) {
         throw new Error(data.error || 'Invalid receipt');
       }
   
-      router.push(`/tip/${data.id}` as any);
+      router.push(`/tip/${data.partyID}` as any);
     } catch (error) {
       setError(true);
       setTimeout(()=> setError(false), 3000);

@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { getApiUrl } from "@/utils/api";
+import { getApiUrl, apiHeaders } from "@/utils/api";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
     ScrollView,
@@ -34,7 +34,7 @@ export default function Receipt() {
 
     const goToSplit = async () => {
       if (!items || !userName) return;
-        await fetch(`${getApiUrl()}/setStatus?partyID=${partyID}&status=splitting`, { method: 'POST' });
+        await fetch(`${getApiUrl()}/setStatus?partyID=${partyID}&status=splitting`, { method: 'POST', headers: apiHeaders() });
         router.push(`/split/${partyID}?userName=${userName}&role=Leader` as any);
     };
 
@@ -54,8 +54,9 @@ export default function Receipt() {
     useEffect(() => {
       const getInfo = async () => {
   
-        const getReceiptInfo = await fetch(`${getApiUrl()}/receipt-info?id=${id}`, {
+        const getReceiptInfo = await fetch(`${getApiUrl()}/receipt-info?partyID=${id}`, {
             method: 'GET',
+            headers: apiHeaders(),
         })
 
         const dataInfo = await getReceiptInfo.json();
@@ -76,7 +77,7 @@ export default function Receipt() {
 
     const getMembers = async () => { // 
     if (!partyID) return;
-     const response = await fetch(`${getApiUrl()}/displayMembers?partyID=${partyID}`);
+     const response = await fetch(`${getApiUrl()}/displayMembers?partyID=${partyID}`, { headers: apiHeaders() });
      const data = await response.json();
      const memberList = data.members || [];
      setMembers(memberList);
@@ -94,6 +95,7 @@ export default function Receipt() {
      if (!userName) return;
      await fetch(`${getApiUrl()}/updateLeaderName?partyID=${partyID}&userName=${userName}`, {
         method: 'POST',
+        headers: apiHeaders(),
     });
     await getMembers();
     };
@@ -108,8 +110,8 @@ export default function Receipt() {
     const addItem = async () => {
         if (!newItem || !newPrice) return;
          const response = await fetch(
-            `${getApiUrl()}/manualAdd?id=${id}&itemName=${encodeURIComponent(newItem)}&itemPrice=${encodeURIComponent(newPrice)}`,
-            { method: 'POST' }
+            `${getApiUrl()}/manualAdd?partyID=${id}&itemName=${encodeURIComponent(newItem)}&itemPrice=${encodeURIComponent(newPrice)}`,
+            { method: 'POST', headers: apiHeaders() }
         );
         
         const data = await response.json();
@@ -121,8 +123,8 @@ export default function Receipt() {
 
     const removeItem = async (itemName: string) => {
      const response = await fetch(
-        `${getApiUrl()}/removeItem?id=${id}&itemName=${encodeURIComponent(itemName)}`,
-        { method: 'POST' }
+        `${getApiUrl()}/removeItem?partyID=${id}&itemName=${encodeURIComponent(itemName)}`,
+        { method: 'POST', headers: apiHeaders() }
      );
      const data = await response.json();
      setItems(data.items);

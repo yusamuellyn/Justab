@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getApiUrl } from '@/utils/api';
+import { getApiUrl, apiHeaders } from '@/utils/api';
 
 const DEEP_OCEAN = '#1E3A5F';
 const COOL_GRAY = '#C5CDD6';
@@ -23,7 +23,7 @@ export default function Totals() {
 
   const getTotals = async () => {
     if (!id) return;
-    const response = await fetch(`${getApiUrl()}/displayTotals?partyID=${id}`);
+    const response = await fetch(`${getApiUrl()}/displayTotals?partyID=${id}`, { headers: apiHeaders() });
     setData(await response.json());
   };
 
