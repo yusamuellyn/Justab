@@ -48,7 +48,7 @@ pytesseract.pytesseract.tesseract_cmd = os.environ.get(
 
 url = os.environ.get("SUPABASE_URL") # Changed To SUPABASE_URL / KEY
 key = os.environ.get("SUPABASE_KEY")
-API_KEY = os.environ.get("SUPABASE_KEY") # Security Addition
+API_KEY = os.environ.get("API_KEY") # Dedicated key for client auth, separate from Supabase key
 supabase: Client = create_client(url, key)
 app = FastAPI()
 
