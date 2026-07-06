@@ -83,7 +83,7 @@ ALLOWED_TYPES = ["image/png", "image/jpeg", "image/heic", "image/heif", "applica
 
 #Rework Later For Non-repition
 # Currently Security Reworked
-ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 def makeCode(length: int = 6) -> str:
     return ''.join(secrets.choice(ALPHABET) for _ in range(length))
