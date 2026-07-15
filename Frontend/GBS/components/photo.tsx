@@ -20,11 +20,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { getApiUrl, apiHeaders } from '../utils/api';
-
-const DEEP_OCEAN = '#1E3A5F';
-const COOL_GRAY = '#C5CDD6';
-const COOL_GRAY_BG = '#E4E9EE';
-const WHITE = '#FFFFFF';
+import { C } from '@/constants/theme';
 
 export default function Photo() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -170,13 +166,13 @@ export default function Photo() {
       <View style={styles.cameraSection}>
       {loading && (
         <View style={styles.loadingBanner}>
-          <ActivityIndicator size="small" color={WHITE} />
+          <ActivityIndicator size="small" color={C.white} />
           <Text style={styles.loadingBannerText}>Loading...</Text>
         </View>
       )}
       {error && (
       <View style={styles.errorBanner}>
-        <Ionicons name="alert-circle-outline" size={16} color={WHITE} />
+        <Ionicons name="alert-circle-outline" size={16} color={C.white} />
         <Text style={styles.errorBannerText}>Upload failed. Try again.</Text>
       </View>
       )}
@@ -197,10 +193,10 @@ export default function Photo() {
                 style={[styles.iconButton, flash !== 'off' && styles.iconButtonActive]}
                 onPress={() => setFlash(flash === 'off' ? 'on' : flash === 'on' ? 'auto' : 'off')}
               >
-                <Ionicons name={flashIcon} size={22} color={WHITE} />
+                <Ionicons name={flashIcon} size={22} color={C.white} />
               </Pressable>
               <Pressable style={styles.iconButton} onPress={() => setFacing(facing === 'back' ? 'front' : 'back')}>
-                <Ionicons name="camera-reverse-outline" size={22} color={WHITE} />
+                <Ionicons name="camera-reverse-outline" size={22} color={C.white} />
               </Pressable>
             </View>
           </View>
@@ -221,7 +217,7 @@ export default function Photo() {
         <View style={styles.bottomActions}>
           <TouchableOpacity style={styles.sideAction} onPress={pickFromGallery}>
             <View style={styles.sideIconWrap}>
-              <Ionicons name="cloud-upload-outline" size={24} color={DEEP_OCEAN} />
+              <Ionicons name="cloud-upload-outline" size={24} color={C.deepOcean} />
             </View>
             <Text style={styles.sideActionLabel}>Upload from{'\n'}Gallery</Text>
           </TouchableOpacity>
@@ -250,45 +246,51 @@ export default function Photo() {
 const styles = StyleSheet.create({
   fill: {
     flex: 1,
-    backgroundColor: COOL_GRAY_BG,
+    backgroundColor: C.coolGrayBg,
   },
   permissionBox: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: COOL_GRAY_BG,
+    backgroundColor: C.coolGrayBg,
   },
   permissionText: {
     fontSize: 16,
     textAlign: 'center',
-    marginBottom: 16,
-    color: DEEP_OCEAN,
+    marginBottom: 20,
+    color: C.deepOcean,
+    lineHeight: 24,
   },
   permissionButton: {
-    backgroundColor: DEEP_OCEAN,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 10,
+    backgroundColor: C.deepOcean,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 14,
+    shadowColor: C.deepOcean,
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
   },
   permissionButtonText: {
-    color: WHITE,
-    fontWeight: '600',
+    color: C.white,
+    fontWeight: '700',
     fontSize: 16,
   },
   cameraSection: {
     flex: 1,
-    backgroundColor: DEEP_OCEAN,
+    backgroundColor: C.deepOcean,
     overflow: 'hidden',
   },
   cameraOverlay: {
     ...StyleSheet.absoluteFillObject,
   },
   topBar: {
-    paddingTop: 12,
+    paddingTop: 14,
     paddingHorizontal: 20,
-    paddingBottom: 16,
-    backgroundColor: 'rgba(30, 58, 95, 0.72)',
+    paddingBottom: 18,
+    backgroundColor: 'rgba(30, 58, 95, 0.78)',
   },
   topIcons: {
     flexDirection: 'row',
@@ -299,15 +301,15 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: 'rgba(255, 255, 255, 0.22)',
   },
   iconButtonActive: {
-    backgroundColor: DEEP_OCEAN,
-    borderColor: WHITE,
+    backgroundColor: C.deepOcean,
+    borderColor: C.white,
   },
   frameArea: {
     flex: 1,
@@ -318,79 +320,88 @@ const styles = StyleSheet.create({
   scanFrame: {
     width: '78%',
     aspectRatio: 0.72,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.35)',
-    backgroundColor: 'rgba(30, 58, 95, 0.18)',
+    borderColor: 'rgba(255, 255, 255, 0.38)',
+    backgroundColor: 'rgba(30, 58, 95, 0.2)',
     position: 'relative',
   },
   corner: {
     position: 'absolute',
-    width: 20,
-    height: 20,
-    borderColor: WHITE,
+    width: 22,
+    height: 22,
+    borderColor: C.white,
   },
   cornerTopLeft: {
     top: -1,
     left: -1,
     borderTopWidth: 3,
     borderLeftWidth: 3,
-    borderTopLeftRadius: 10,
+    borderTopLeftRadius: 12,
   },
   cornerTopRight: {
     top: -1,
     right: -1,
     borderTopWidth: 3,
     borderRightWidth: 3,
-    borderTopRightRadius: 10,
+    borderTopRightRadius: 12,
   },
   cornerBottomLeft: {
     bottom: -1,
     left: -1,
     borderBottomWidth: 3,
     borderLeftWidth: 3,
-    borderBottomLeftRadius: 10,
+    borderBottomLeftRadius: 12,
   },
   cornerBottomRight: {
     bottom: -1,
     right: -1,
     borderBottomWidth: 3,
     borderRightWidth: 3,
-    borderBottomRightRadius: 10,
+    borderBottomRightRadius: 12,
   },
   hintText: {
-    marginTop: 16,
-    color: WHITE,
+    marginTop: 18,
+    color: C.white,
     fontSize: 13,
     fontWeight: '500',
-    letterSpacing: 0.2,
+    letterSpacing: 0.3,
+    opacity: 0.92,
   },
   bottomBar: {
-    backgroundColor: COOL_GRAY_BG,
-    paddingTop: 18,
-    paddingBottom: 10,
-    borderTopWidth: 1,
-    borderTopColor: COOL_GRAY,
+    backgroundColor: C.coolGrayBg,
+    paddingTop: 20,
+    paddingBottom: 8,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    shadowColor: C.deepOcean,
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: -4 },
+    elevation: 8,
   },
   bottomActions: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 28,
+    paddingHorizontal: 32,
   },
   sideAction: {
     alignItems: 'center',
     width: 90,
   },
   sideIconWrap: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: WHITE,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: C.white,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: COOL_GRAY,
+    shadowColor: C.deepOcean,
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
   },
   partyIcon: {
     width: 26,
@@ -398,45 +409,51 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
   sideActionLabel: {
-    marginTop: 6,
+    marginTop: 7,
     fontSize: 11,
     textAlign: 'center',
-    color: DEEP_OCEAN,
+    color: C.deepOcean,
     lineHeight: 14,
-    fontWeight: '500',
+    fontWeight: '600',
+    letterSpacing: 0.1,
   },
   shutterWrap: {
-    width: 64,
-    height: 64,
+    width: 68,
+    height: 68,
     alignItems: 'center',
     justifyContent: 'center',
   },
   shutterButton: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: WHITE,
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    backgroundColor: C.white,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: DEEP_OCEAN,
+    borderColor: C.deepOcean,
+    shadowColor: C.deepOcean,
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
   },
   shutterInner: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: DEEP_OCEAN,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: C.deepOcean,
   },
   errorBanner: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#C0392B',
+    backgroundColor: C.error,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
+    paddingVertical: 11,
     gap: 8,
     zIndex: 30,
   },
@@ -445,21 +462,21 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    backgroundColor: DEEP_OCEAN,
+    backgroundColor: C.deepOcean,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
+    paddingVertical: 11,
     gap: 8,
     zIndex: 30,
   },
   loadingBannerText: {
-    color: WHITE,
+    color: C.white,
     fontSize: 14,
     fontWeight: '600',
   },
   errorBannerText: {
-    color: WHITE,
+    color: C.white,
     fontSize: 14,
     fontWeight: '600',
   },

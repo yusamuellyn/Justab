@@ -9,11 +9,7 @@ import {
 } from 'react-native';
 import {useEffect, useState} from "react";
 import { getApiUrl, apiHeaders } from "@/utils/api";
-
-const DEEP_OCEAN = '#1E3A5F';
-const COOL_GRAY = '#C5CDD6';
-const COOL_GRAY_BG = '#E4E9EE';
-const WHITE = '#FFFFFF';
+import { C, card, primaryBtn, backBtn, input, fieldLabel, screenTitle, rowDivider } from '@/constants/theme';
 
 
 
@@ -120,7 +116,7 @@ export default function Party() {
                     onChangeText={setCI}
                     value={codeInput}
                     placeholder="Enter party code"
-                    placeholderTextColor={COOL_GRAY}
+                    placeholderTextColor={C.coolGray}
                     autoCapitalize="characters"
                     />
         </View>
@@ -132,7 +128,7 @@ export default function Party() {
                     onChangeText={setUN}
                     value={userName}
                     placeholder="Enter username"
-                    placeholderTextColor={COOL_GRAY}
+                    placeholderTextColor={C.coolGray}
                   />
         </View>
 
@@ -156,77 +152,46 @@ export default function Party() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: COOL_GRAY_BG, padding: 24 },
+    container: { flex: 1, backgroundColor: C.coolGrayBg, padding: 20 },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 24,
+        marginBottom: 20,
     },
-    backButton: { paddingRight: 12 },
-    backIcon: { fontSize: 34, color: DEEP_OCEAN, lineHeight: 34 },
-    title: { flex: 1, fontSize: 24, fontWeight: '700', color: DEEP_OCEAN, textAlign: 'center', marginRight: 34 },
-    card: {
-        backgroundColor: WHITE,
-        borderRadius: 16,
-        paddingVertical: 18,
-        paddingHorizontal: 20,
-        marginBottom: 16,
-        borderWidth: 1,
-        borderColor: COOL_GRAY,
-        shadowColor: '#000',
-        shadowOpacity: 0.06,
-        shadowRadius: 12,
-        shadowOffset: { width: 0, height: 4 },
-        elevation: 3,
-    },
+    backButton: backBtn,
+    backIcon: { fontSize: 28, color: C.deepOcean, lineHeight: 28, marginLeft: -2 },
+    title: screenTitle,
+    card,
     row: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        paddingVertical: 4,
+        alignItems: 'center',
+        paddingVertical: 11,
+        ...rowDivider,
     },
-
-     input: {
-    height: 50,
-    borderColor: COOL_GRAY,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    marginBottom: 12,
-    backgroundColor: WHITE,
-    color: DEEP_OCEAN,
-    fontSize: 15,
-  },
-  fieldLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#5A6B7D',
-    marginBottom: 6,
-  },
-  joinButton: {
-    backgroundColor: DEEP_OCEAN,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  joinButtonText: {
-    color: WHITE,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  message: {
-    fontSize: 15,
-    color: DEEP_OCEAN,
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  waitingText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#5A6B7D',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-
-  itemName: { fontSize: 15, color: DEEP_OCEAN, flex: 1 },
-  itemPrice: { fontSize: 15, color: DEEP_OCEAN, fontVariant: ['tabular-nums'], fontWeight: '600' },
+    input,
+    fieldLabel,
+    joinButton: primaryBtn,
+    joinButtonText: {
+        color: C.white,
+        fontSize: 16,
+        fontWeight: '700',
+        letterSpacing: 0.2,
+    },
+    message: {
+        fontSize: 14,
+        color: C.error,
+        textAlign: 'center',
+        marginBottom: 12,
+        fontWeight: '500',
+    },
+    waitingText: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: C.muted,
+        textAlign: 'center',
+        marginBottom: 20,
+    },
+    itemName: { fontSize: 15, color: C.deepOcean, flex: 1, fontWeight: '500' },
+    itemPrice: { fontSize: 13, color: C.muted, fontWeight: '600' },
 });

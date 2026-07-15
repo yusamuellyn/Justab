@@ -4,11 +4,7 @@ import { useCallback, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-
-const DEEP_OCEAN = '#1E3A5F';
-const COOL_GRAY = '#C5CDD6';
-const COOL_GRAY_BG = '#E4E9EE';
-const WHITE = '#FFFFFF';
+import { C, card, primaryBtn, backBtn } from '@/constants/theme';
 
 export default function Tip() {
   const { id } = useLocalSearchParams();
@@ -69,7 +65,7 @@ export default function Tip() {
               value={selectedValue}
               onChangeText={handleChange}
               placeholder="0"
-              placeholderTextColor={COOL_GRAY}
+              placeholderTextColor={C.coolGray}
               maxLength={5}
             />
             <Text style={styles.percentSign}>%</Text>
@@ -87,88 +83,77 @@ export default function Tip() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COOL_GRAY_BG,
+    backgroundColor: C.coolGrayBg,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingHorizontal: 20,
+    paddingTop: 6,
     paddingBottom: 12,
   },
-  backButton: {
-    padding: 8,
-  },
+  backButton: backBtn,
   backIcon: {
-    fontSize: 34,
-    color: DEEP_OCEAN,
-    lineHeight: 34,
+    fontSize: 28,
+    color: C.deepOcean,
+    lineHeight: 28,
+    marginLeft: -2,
   },
   content: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 8,
+    paddingHorizontal: 20,
+    paddingTop: 4,
   },
   card: {
-    backgroundColor: WHITE,
-    borderRadius: 16,
-    paddingVertical: 28,
+    ...card,
+    paddingVertical: 32,
     paddingHorizontal: 24,
-    borderWidth: 1,
-    borderColor: COOL_GRAY,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
   },
   title: {
     fontSize: 22,
     fontWeight: '700',
-    marginBottom: 8,
-    color: DEEP_OCEAN,
+    marginBottom: 10,
+    color: C.deepOcean,
     textAlign: 'center',
+    letterSpacing: -0.4,
   },
   subtitle: {
     fontSize: 14,
-    color: '#5A6B7D',
+    color: C.muted,
     textAlign: 'center',
-    marginBottom: 28,
-    lineHeight: 20,
+    marginBottom: 32,
+    lineHeight: 21,
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 28,
+    marginBottom: 32,
   },
   input: {
     width: 100,
-    height: 64,
+    height: 68,
     borderWidth: 1,
-    borderColor: COOL_GRAY,
-    borderRadius: 12,
+    borderColor: C.coolGrayLight,
+    borderRadius: 14,
     textAlign: 'center',
-    fontSize: 32,
-    fontWeight: '600',
-    backgroundColor: COOL_GRAY_BG,
-    color: DEEP_OCEAN,
+    fontSize: 34,
+    fontWeight: '700',
+    backgroundColor: C.coolGrayBg,
+    color: C.deepOcean,
+    letterSpacing: -1,
   },
   percentSign: {
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: '600',
-    color: DEEP_OCEAN,
+    color: C.muted,
     marginLeft: 8,
   },
-  confirmButton: {
-    backgroundColor: DEEP_OCEAN,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
+  confirmButton: primaryBtn,
   confirmText: {
-    color: WHITE,
+    color: C.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
 });

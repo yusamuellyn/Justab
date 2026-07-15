@@ -1,20 +1,10 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getApiUrl, apiHeaders } from "@/utils/api";
 import { SafeAreaView } from 'react-native-safe-area-context';
-import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from 'react-native';
-import {useEffect, useState} from "react";
-
-const DEEP_OCEAN = '#1E3A5F';
-const COOL_GRAY = '#C5CDD6';
-const COOL_GRAY_BG = '#E4E9EE';
-const WHITE = '#FFFFFF';
+import {ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Animated} from 'react-native';
+import {useEffect, useState, useRef} from "react";
+import { C, card, cardInfo, primaryBtn, backBtn, input, fieldLabel, screenTitle, rowDivider } from '@/constants/theme';
+import * as Clipboard from 'expo-clipboard';
 
 export default function Receipt() {
     const { id } = useLocalSearchParams();
@@ -31,6 +21,36 @@ export default function Receipt() {
     const [partyID, setPartyID] = useState<string>('');
 
     const [members, setMembers] = useState<any[]>([]);
+    const [showToast, setShowToast] = useState(false);
+
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+
+    const triggerToast = () => {
+        setShowToast(true);
+        fadeAnim.setValue(0);
+        Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+        }).start(() => {
+        setTimeout(() => {
+            Animated.timing(fadeAnim, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+            }).start(({ finished }) => {
+                if (finished) setShowToast(false);
+            });
+        }, 2000);
+        });
+    };
+
+    const handleShare = async () => {
+        const customMessage = `Join my Justab!! Code: ${joinCode}`;
+
+        await Clipboard.setStringAsync(customMessage);
+        triggerToast();
+    };
 
     const goToSplit = async () => {
       if (!items || !userName) return;
@@ -145,40 +165,50 @@ export default function Receipt() {
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
             >
-            <View style={styles.card}>
+            <View style={styles.cardInfo}>
                 <Text style={styles.disclaimerText}>
                     Items may be incorrectly recognized in early versions, especially with complex receipts. Please re-enter items with any issues.
                 </Text>
             </View>
 
             <View style={styles.card}>
-                {items && Object.entries(items).map(([name, price]) => (
-                    <View key={name} style={styles.row}>
+                {items && Object.entries(items).map(([name, price], index, arr) => (
+                    <View key={name} style={[styles.row, index < arr.length - 1 && styles.rowBorder]}>
                         <Text style={styles.itemName}>{name}</Text>
                         <Text style={styles.itemPrice}>${Number(price).toFixed(2)}</Text>
 
-                        <TouchableOpacity onPress={() => removeItem(name)}>
-                         <Text style={{ color: 'red' }}>✕</Text>
+                        <TouchableOpacity onPress={() => removeItem(name)} style={styles.removeBtn}>
+                         <Text style={styles.removeText}>✕</Text>
                         </TouchableOpacity>
                     </View>
                 ))}
             </View>
 
-            {tip != null && (
+            {(tip != null || joinCode) && (
                 <View style={styles.card}>
-                    <View style={styles.row}>
-                        <Text style={styles.itemName}>Tip</Text>
-                        <Text style={styles.itemPrice}>{Number(tip)}%</Text>
-                    </View>
+                    {tip != null && (
+                        <View style={styles.metaRow}>
+                            <Text style={styles.metaLabel}>Tip</Text>
+                            <Text style={styles.metaValue}>{Number(tip)}%</Text>
+                        </View>
+                    )}
+                    {tip != null && joinCode ? <View style={styles.cardDivider} /> : null}
+                    {joinCode ? (
+                        <>
+                            <Text style={styles.fieldLabel}>Party Code (If Necessary)</Text>
+                            <Text style={styles.codeValue}>{joinCode}</Text>
+                            <TouchableOpacity style={styles.copyButton} onPress={handleShare}>
+                                <Text style={styles.copyButtonText}>Copy Invite</Text>
+                            </TouchableOpacity>
+                            {showToast ? (
+                                <Animated.View style={[styles.toast, { opacity: fadeAnim }]} pointerEvents="none">
+                                    <Text style={styles.toastText}>Invite Code Copied!</Text>
+                                </Animated.View>
+                            ) : null}
+                        </>
+                    ) : null}
                 </View>
             )}
-            
-            
-            <View style={styles.card}>
-                <View style={styles.row}>
-                    <Text style={styles.itemName}> Party Code (If Necessary): {joinCode}</Text>
-                </View>
-            </View>
             
              <View style={styles.card}>
                 <Text style={styles.fieldLabel}>Name</Text>
@@ -187,7 +217,7 @@ export default function Receipt() {
                         onChangeText={setNewItem}
                         value={newItem}
                         placeholder="Enter item name"
-                        placeholderTextColor={COOL_GRAY}
+                        placeholderTextColor={C.coolGray}
                     />
 
                 <Text style={styles.fieldLabel}>Price</Text>
@@ -196,7 +226,7 @@ export default function Receipt() {
                         onChangeText={setNewPrice}
                         value={newPrice}
                         placeholder="0.00"
-                        placeholderTextColor={COOL_GRAY}
+                        placeholderTextColor={C.coolGray}
                         keyboardType="decimal-pad"
                     />
                     
@@ -212,7 +242,7 @@ export default function Receipt() {
                         onChangeText={setUN}
                         value={userName}
                         placeholder="Enter username"
-                        placeholderTextColor={COOL_GRAY}
+                        placeholderTextColor={C.coolGray}
                     />
                     
                     <TouchableOpacity style={styles.actionButton} onPress={updateUsername}>
@@ -249,106 +279,142 @@ export default function Receipt() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: COOL_GRAY_BG },
+    container: { flex: 1, backgroundColor: C.coolGrayBg },
     scroll: { flex: 1 },
-    scrollContent: { paddingHorizontal: 24, paddingBottom: 32 },
+    scrollContent: { paddingHorizontal: 20, paddingBottom: 36 },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 24,
-        paddingHorizontal: 24,
-        paddingTop: 8,
-    },
-    backButton: { paddingRight: 12 },
-    backIcon: { fontSize: 34, color: DEEP_OCEAN, lineHeight: 34 },
-    title: { flex: 1, fontSize: 24, fontWeight: '700', color: DEEP_OCEAN, textAlign: 'center', marginRight: 34 },
-    card: {
-        backgroundColor: WHITE,
-        borderRadius: 16,
-        paddingVertical: 18,
+        marginBottom: 20,
         paddingHorizontal: 20,
-        marginBottom: 16,
-        borderWidth: 1,
-        borderColor: COOL_GRAY,
-        shadowColor: '#000',
-        shadowOpacity: 0.06,
-        shadowRadius: 12,
-        shadowOffset: { width: 0, height: 4 },
-        elevation: 3,
+        paddingTop: 6,
     },
+    backButton: backBtn,
+    backIcon: { fontSize: 28, color: C.deepOcean, lineHeight: 28, marginLeft: -2 },
+    title: screenTitle,
+    card,
+    cardInfo,
     row: {
         flexDirection: 'row',
+        alignItems: 'center',
         justifyContent: 'space-between',
-        paddingVertical: 4,
+        paddingVertical: 11,
+        gap: 10,
     },
-
-     input: {
-    height: 50,
-    borderColor: COOL_GRAY,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    marginBottom: 12,
-    backgroundColor: WHITE,
-    color: DEEP_OCEAN,
-    fontSize: 15,
-  },
-  fieldLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#5A6B7D',
-    marginBottom: 6,
-  },
-  disclaimerText: {
-    color: '#5A6B7D',
-    fontSize: 13,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  
-  displayText: {
-    fontSize: 18,
-  },
-
-  itemName: { fontSize: 15, color: DEEP_OCEAN, flex: 1 },
-  itemPrice: { fontSize: 15, color: DEEP_OCEAN, fontVariant: ['tabular-nums'], fontWeight: '600' },
-  memberRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COOL_GRAY,
-  },
-  memberRole: {
-    fontSize: 13,
-    color: '#5A6B7D',
-    fontWeight: '600',
-  },
-  actionButton: {
-    alignSelf: 'flex-start',
-    backgroundColor: COOL_GRAY_BG,
-    borderWidth: 1,
-    borderColor: COOL_GRAY,
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  actionButtonText: {
-    color: DEEP_OCEAN,
-    fontWeight: '600',
-    fontSize: 15,
-  },
-  splitButton: {
-    marginTop: 16,
-    backgroundColor: DEEP_OCEAN,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  splitButtonText: {
-    color: WHITE,
-    fontSize: 16,
-    fontWeight: '600',
-  },
+    rowBorder: rowDivider,
+    input,
+    fieldLabel,
+    disclaimerText: {
+        color: C.muted,
+        fontSize: 13,
+        textAlign: 'center',
+        lineHeight: 20,
+    },
+    displayText: {
+        fontSize: 18,
+    },
+    itemName: { fontSize: 15, color: C.deepOcean, flex: 1, fontWeight: '500' },
+    itemPrice: { fontSize: 15, color: C.deepOcean, fontVariant: ['tabular-nums'], fontWeight: '600' },
+    removeBtn: {
+        width: 26,
+        height: 26,
+        borderRadius: 13,
+        backgroundColor: C.errorSoft,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    removeText: { color: C.error, fontSize: 12, fontWeight: '700' },
+    codeValue: {
+        fontSize: 20,
+        fontWeight: '700',
+        color: C.deepOcean,
+        letterSpacing: 3,
+        fontVariant: ['tabular-nums'],
+        marginBottom: 12,
+    },
+    copyButton: {
+        backgroundColor: C.deepOcean,
+        borderRadius: 12,
+        paddingVertical: 12,
+        alignItems: 'center',
+        shadowColor: C.deepOcean,
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 3 },
+        elevation: 4,
+    },
+    copyButtonText: {
+        color: C.white,
+        fontWeight: '700',
+        fontSize: 15,
+    },
+    metaRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    metaLabel: {
+        fontSize: 15,
+        fontWeight: '500',
+        color: C.deepOcean,
+    },
+    metaValue: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: C.deepOcean,
+        fontVariant: ['tabular-nums'],
+    },
+    cardDivider: {
+        height: 1,
+        backgroundColor: C.coolGrayLight,
+        marginVertical: 14,
+    },
+    memberRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 11,
+        ...rowDivider,
+    },
+    memberRole: {
+        fontSize: 13,
+        color: C.muted,
+        fontWeight: '600',
+    },
+    actionButton: {
+        alignSelf: 'flex-start',
+        backgroundColor: C.deepOcean,
+        borderRadius: 12,
+        paddingVertical: 11,
+        paddingHorizontal: 18,
+        shadowColor: C.deepOcean,
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 3 },
+        elevation: 4,
+    },
+    actionButtonText: {
+        color: C.white,
+        fontWeight: '700',
+        fontSize: 15,
+    },
+    splitButton: {
+        marginTop: 8,
+        ...primaryBtn,
+    },
+    splitButtonText: {
+        color: C.white,
+        fontSize: 16,
+        fontWeight: '700',
+        letterSpacing: 0.2,
+    },
+    toast: {
+        marginTop: 10,
+        alignSelf: 'center',
+        backgroundColor: C.deepOcean,
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 10,
+    },
+    toastText: { color: C.white, fontSize: 13, fontWeight: '600' },
 });

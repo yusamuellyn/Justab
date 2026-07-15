@@ -3,11 +3,7 @@ import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getApiUrl, apiHeaders } from '@/utils/api';
-
-const DEEP_OCEAN = '#1E3A5F';
-const COOL_GRAY = '#C5CDD6';
-const COOL_GRAY_BG = '#E4E9EE';
-const WHITE = '#FFFFFF';
+import { C, card, cardInfo, backBtn, fieldLabel, screenTitle, rowDivider } from '@/constants/theme';
 
 type TotalsResponse = {
   totals: { user: string; owes: number }[];
@@ -49,8 +45,8 @@ export default function Totals() {
       >
         <View style={styles.card}>
           <Text style={styles.fieldLabel}>Totals</Text>
-          {data?.totals.map((person) => (
-            <View key={person.user} style={styles.row}>
+          {data?.totals.map((person, index, arr) => (
+            <View key={person.user} style={[styles.row, index < arr.length - 1 && styles.rowBorder]}>
               <Text style={styles.itemName}>{person.user}</Text>
               <Text style={styles.itemPrice}>${person.owes.toFixed(2)}</Text>
             </View>
@@ -60,7 +56,7 @@ export default function Totals() {
         {data && data.unclaimed > 0 && (
           <View style={styles.warningCard}>
             <Text style={styles.warning}>
-              ${data.unclaimed.toFixed(2)} in items hasn't been claimed by anyone yet
+              ${data.unclaimed.toFixed(2)} in items has not been claimed by anyone yet
             </Text>
           </View>
         )}
@@ -70,72 +66,44 @@ export default function Totals() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COOL_GRAY_BG },
+  container: { flex: 1, backgroundColor: C.coolGrayBg },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 8,
+    paddingHorizontal: 20,
+    paddingTop: 6,
     paddingBottom: 12,
   },
-  backButton: { paddingRight: 12 },
-  backIcon: { fontSize: 34, color: DEEP_OCEAN, lineHeight: 34 },
-  title: {
-    flex: 1,
-    fontSize: 24,
-    fontWeight: '700',
-    color: DEEP_OCEAN,
-    textAlign: 'center',
-    marginRight: 34,
-  },
+  backButton: backBtn,
+  backIcon: { fontSize: 28, color: C.deepOcean, lineHeight: 28, marginLeft: -2 },
+  title: screenTitle,
   scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 24, paddingBottom: 32 },
-  card: {
-    backgroundColor: WHITE,
-    borderRadius: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: COOL_GRAY,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
-  },
-  fieldLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#5A6B7D',
-    marginBottom: 10,
-  },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 36 },
+  card,
+  fieldLabel,
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COOL_GRAY,
+    paddingVertical: 12,
   },
-  itemName: { fontSize: 15, color: DEEP_OCEAN, flex: 1 },
+  rowBorder: rowDivider,
+  itemName: { fontSize: 15, color: C.deepOcean, flex: 1, fontWeight: '500' },
   itemPrice: {
-    fontSize: 15,
-    color: DEEP_OCEAN,
-    fontWeight: '600',
+    fontSize: 16,
+    color: C.deepOcean,
+    fontWeight: '700',
     fontVariant: ['tabular-nums'],
+    letterSpacing: -0.2,
   },
   warningCard: {
-    backgroundColor: WHITE,
-    borderRadius: 12,
+    ...cardInfo,
     paddingVertical: 14,
     paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: COOL_GRAY,
   },
   warning: {
     fontSize: 13,
-    color: DEEP_OCEAN,
+    color: C.muted,
     textAlign: 'center',
     lineHeight: 20,
   },

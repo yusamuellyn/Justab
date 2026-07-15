@@ -9,11 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getApiUrl, apiHeaders } from '@/utils/api';
-
-const DEEP_OCEAN = '#1E3A5F';
-const COOL_GRAY = '#C5CDD6';
-const COOL_GRAY_BG = '#E4E9EE';
-const WHITE = '#FFFFFF';
+import { C, card, primaryBtn, backBtn, screenTitle, rowDivider } from '@/constants/theme';
 
 type Item = {
   name: string;
@@ -78,17 +74,18 @@ export default function Split() {
       <View style={styles.card}>
         {items.map((item, index) => {
           const isMine = item.claims.includes(userName as string);
+          const isLast = index === items.length - 1;
           return (
             <TouchableOpacity
               key={index}
-              style={styles.row}
+              style={[styles.row, !isLast && styles.rowBorder, isMine && styles.rowSelected]}
               onPress={() => toggleItem(index)}
               activeOpacity={0.7}
             >
               <Ionicons
                 name={isMine ? 'checkbox' : 'square-outline'}
                 size={24}
-                color={isMine ? DEEP_OCEAN : COOL_GRAY}
+                color={isMine ? C.deepOcean : C.coolGray}
               />
               <View style={{ flex: 1 }}>
                 <Text style={styles.itemName}>{item.name}</Text>
@@ -119,57 +116,49 @@ export default function Split() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COOL_GRAY_BG, padding: 24 },
+  container: { flex: 1, backgroundColor: C.coolGrayBg, padding: 20 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
-    paddingTop: 8,
+    marginBottom: 20,
+    paddingTop: 6,
   },
-  backButton: { paddingRight: 12 },
-  backIcon: { fontSize: 34, color: DEEP_OCEAN, lineHeight: 34 },
-  title: {
-    flex: 1,
-    fontSize: 24,
-    fontWeight: '700',
-    color: DEEP_OCEAN,
-    textAlign: 'center',
-    marginRight: 34,
+  backButton: backBtn,
+  backIcon: { fontSize: 28, color: C.deepOcean, lineHeight: 28, marginLeft: -2 },
+  title: screenTitle,
+  card,
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    gap: 12,
+    borderRadius: 10,
+    marginHorizontal: -4,
+    paddingHorizontal: 4,
   },
-  card: {
-    backgroundColor: WHITE,
-    borderRadius: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 20,
-    borderWidth: 1,
-    borderColor: COOL_GRAY,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+  rowBorder: rowDivider,
+  rowSelected: {
+    backgroundColor: C.infoBg,
+    paddingHorizontal: 8,
+    marginHorizontal: -8,
   },
-  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 12 },
-  itemName: { fontSize: 15, color: DEEP_OCEAN },
-  claimedBy: { fontSize: 12, color: '#5A6B7D', marginTop: 2 },
+  itemName: { fontSize: 15, color: C.deepOcean, fontWeight: '500' },
+  claimedBy: { fontSize: 12, color: C.muted, marginTop: 3 },
   itemPrice: {
     fontSize: 15,
-    color: DEEP_OCEAN,
+    color: C.deepOcean,
     fontWeight: '600',
     fontVariant: ['tabular-nums'],
   },
   doneButton: {
-    backgroundColor: DEEP_OCEAN,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 20,
+    ...primaryBtn,
+    marginTop: 16,
   },
-  doneText: { color: WHITE, fontSize: 16, fontWeight: '600' },
+  doneText: { color: C.white, fontSize: 16, fontWeight: '700', letterSpacing: 0.2 },
   waitingText: {
     marginTop: 20,
     textAlign: 'center',
-    color: '#5A6B7D',
+    color: C.muted,
     fontSize: 14,
     fontWeight: '500',
   },
