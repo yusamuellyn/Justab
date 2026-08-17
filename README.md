@@ -29,7 +29,7 @@ But everything then comes together when your group joins a party. Only one membe
 - Complete Transparency Throughout The Entire Process, Including Tips
 - And More
 
-# 🛠️ Tech Stack
+# Tech Stack
 
 - React Native (Frontend & Styling)
 - Expo (Development)
